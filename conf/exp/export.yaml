@@ -1,0 +1,3 @@
+_target_: experiments.export_dataset.ExportDataset
+
+out_dir: data/bins

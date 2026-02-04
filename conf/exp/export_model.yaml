@@ -1,0 +1,4 @@
+_target_: experiments.export_model.ExportModel
+
+out_dir: data/models_c
+state_dict: data/pretrained_models/model.pt

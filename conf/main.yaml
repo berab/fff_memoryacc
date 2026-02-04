@@ -1,0 +1,35 @@
+_target_: main.Main
+
+proj_name: hydra_template
+
+defaults:
+  # Main
+  - _self_
+  - exp: train
+  - mlflow: my_mlflow
+  - model: fff
+  - loader: mnist
+  - optim: adam
+  # - pbs
+  # - slurm
+
+seed: 47
+epochs: 50
+
+device: 
+  _target_: torch.device
+  type: cpu 
+  index: 0
+
+## Output dir
+hydra:
+  run:
+    dir: data/${proj_name}_outputs/${exp._target_}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  sweep:
+    dir: data/${proj_name}_multirun/${exp._target_}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  job: # squeue
+    name: ${proj_name}_${exp._target_}
+  # callbacks:
+  #   mlflow_to_csv:
+  #     _target_: main.MLFlowToCSV
+  #     exp: ${mlflow.exp}
