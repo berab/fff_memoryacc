@@ -1,0 +1,4 @@
+_target_: experiments.export_intermediates.ExportIntermediates
+
+out_dir: data/intermediates
+model: data/pretrained_models/mnist_d4_l16_model.pt
