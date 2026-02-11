@@ -1,13 +1,13 @@
 import torch
 import random
 import hydra
-# import mlflow
 from omegaconf import DictConfig
 from dataclasses import dataclass
 from hydra.utils import instantiate
-from hydra.experimental.callback import Callback
-from typing import Any
 
+# # import mlflow
+# from hydra.experimental.callback import Callback
+# from typing import Any
 # class MLFlowToCSV(Callback):
 #     def __init__(self, exp):
 #         self.exp = exp
@@ -51,8 +51,7 @@ def main(cfg: DictConfig):
     random.seed(cfg.seed)
     cfg = instantiate(cfg)
     # Run experiment
-    # cfg.exp.main(cfg)
-    cfg.exp.run(cfg)
+    cfg.exp.main(cfg)
 
 if __name__ == "__main__":
     main()

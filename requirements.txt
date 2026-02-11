@@ -6,3 +6,4 @@ hydra-submitit-launcher
 mlflow
 dagshub
 tqdm
+codecarbon

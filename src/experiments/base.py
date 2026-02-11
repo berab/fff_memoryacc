@@ -3,6 +3,7 @@ import pandas as pd
 import hydra.core.hydra_config
 import mlflow
 import logging
+from codecarbon import EmissionsTracker
 from typing import Optional
 from pathlib import Path
 from abc import ABC, abstractmethod
@@ -100,10 +101,11 @@ class BaseTrainExp(BaseExp):
         self.model: torch.nn.Module
 
     def run(self, cfg):
-        self.setup(cfg.mlflow, cfg.model, cfg.loader, cfg.optim, cfg.epochs, cfg.device)
-        self.start_run(cfg.seed)
-        self.log_exp(self.run_exp())
-        self.end_run()
+        with EmissionsTracker(output_dir=self.out_dir, log_level="error"):
+            self.setup(cfg.mlflow, cfg.model, cfg.loader, cfg.optim, cfg.epochs, cfg.device)
+            self.start_run(cfg.seed)
+            self.log_exp(self.run_exp())
+            self.end_run()
 
     @abstractmethod
     def log_exp(self, *args, **kwargs) -> None:
