@@ -1,5 +1,6 @@
 import torch
 import random
+import numpy as np
 import hydra
 from omegaconf import DictConfig
 from dataclasses import dataclass
@@ -48,10 +49,15 @@ class Main:
 @hydra.main(config_path="../conf/", config_name="main", version_base='1.3')
 def main(cfg: DictConfig):
     # Init RNG_level s
+    torch.manual_seed(cfg.seed)
+    torch.use_deterministic_algorithms(True)
+    np.random.seed(cfg.seed)
     random.seed(cfg.seed)
+
     cfg = instantiate(cfg)
     # Run experiment
-    cfg.exp.main(cfg)
+    cfg.exp.run(cfg)
+    # cfg.exp.main(cfg)
 
 if __name__ == "__main__":
     main()

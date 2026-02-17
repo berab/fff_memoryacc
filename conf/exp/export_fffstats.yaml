@@ -1,0 +1,4 @@
+_target_: experiments.export_fff_stats.ExportFFFStats
+
+out_dir: data/fff_stats
+state_dict: data/pretrained_models/mnist_d4_l16.pt

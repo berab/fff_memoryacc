@@ -25,6 +25,7 @@ class FFF(nn.Module):
         self.b2s = nn.Parameter(torch.empty((self.n_leaves, out_features), dtype=torch.float).uniform_(-l2_init_factor, +l2_init_factor), requires_grad=True)
 
     def training_forward(self, x: torch.Tensor):
+        x = x.view(len(x), -1)
         # x has shape (batch_size, in_features)
         original_shape = x.shape
         x = x.reshape(-1, x.shape[-1])
@@ -78,13 +79,13 @@ class FFF(nn.Module):
         return final_logits
 
     def forward(self, x: torch.Tensor):
-        x = x.view(len(x), -1)
         if self.training:
             return self.training_forward(x)
         else:
             return self.eval_forward(x)
 
-    def eval_forward(self, x: torch.Tensor) -> torch.Tensor:
+    def eval_forward(self, x: torch.Tensor, return_leaves: bool = False) -> torch.Tensor:
+        x = x.view(len(x), -1)
         original_shape = x.shape
         x = x.reshape(-1, x.shape[-1])
         batch_size = x.shape[0]
@@ -118,7 +119,10 @@ class FFF(nn.Module):
             ).squeeze(-2)                                   # (1, self.out_features)
 
 
-        return new_logits.view(*original_shape[:-1], self.out_features) # (..., self.out_features)
+        out_logits = new_logits.view(*original_shape[:-1], self.out_features), leaves.view(*original_shape[:-1]) # (..., self.out_features), (...,)
+        if return_leaves:
+            return leaves
+        return out_logits
 
     def get_config(self):
         return {

@@ -24,7 +24,7 @@ class ExportDataset(BaseExp):
             f.write(f"#define N_SAMPLES {self.loader.batch_size}\n")
             f.write(f"#define FILENAME {set_name}.bin\n")
 
-        for i, (input, _) in enumerate(self.loader.test):
+        for _, (input, _) in enumerate(self.loader.test):
             with open(self.bin_dir/f"{set_name}.bin", 'wb') as f:
                 f.write(input.flatten(1).numpy().tobytes())
 
