@@ -14,7 +14,7 @@ MAIN_SOURCES = $(TARGET).c
 MAIN_SOURCES += fff.c
 TEST_SOURCES = test.c
 
-.PHONY: all run test clean debug
+.PHONY: all run test clean debug time
 
 all: $(TARGET)
 
@@ -34,6 +34,11 @@ test: $(TEST_BIN)
 debug: CFLAGS += $(DEBUGFLAGS)
 debug: clean $(TEST_BIN)
 	gdb $(TEST_BIN)
+
+# Build and time the program with clean timing (stdout -> /dev/null)
+time: $(TARGET)
+	@echo "Timing $(TARGET)..."
+	@time -p sh -c './$(TARGET) > /dev/null'
 
 clean:
 	rm -f $(TARGET) $(TEST_BIN) $(TENSORS)
