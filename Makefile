@@ -38,7 +38,13 @@ debug: clean $(TEST_BIN)
 # Build and time the program with clean timing (stdout -> /dev/null)
 time: $(TARGET)
 	@echo "Timing $(TARGET)..."
-	@/usr/bin/time -p ./$(TARGET) > /dev/null 2>&1 || true
+	@bash -lc 'time -p ./$(TARGET) > /dev/null'
+
+cache: $(TARGET)
+	@echo "Caching $(TARGET)..."
+	@valgrind --tool=cachegrind ./cachegrind/$(TARGET)
+	@valgrind --tool=cachegrind --cachegrind-out-file=cachegrind/$(TARGET).out ./cachegrind/$(TARGET)
+	@cg_annotate cachegrind/$(TARGET).out > cachegrind/$(TARGET).out.annotated
 
 clean:
 	rm -f $(TARGET) $(TEST_BIN) $(TENSORS)

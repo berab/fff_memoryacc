@@ -38,7 +38,7 @@ float neuron(float weights[], float bias, float input[], int dim) {
 		return accumulator + bias;
 }
 
-int fff(float input[], float output[]) {
+void fff(float input[], float output[]) {
     // ROUTING
     int n = 0;
     for (int i = 0; i < DEPTH; i++) {
@@ -58,5 +58,5 @@ int fff(float input[], float output[]) {
     for (int i = 0; i < OUT_FEATURES; i++) {
         output[i] = neuron(&lw2[(n * OUT_FEATURES + i) * LEAF_WIDTH], lb2[n * OUT_FEATURES + i], hidden, LEAF_WIDTH);
     }
-    return argmax(output);
+    argmax(output);
 }
