@@ -2,7 +2,7 @@ _target_: loaders.speechcommands.SCLoader
 
 sample_rate: 16000
 batch_size: 512
-num_workers: 0
+num_workers: 8
 
 feature:
   _target_: torchaudio.transforms.MFCC

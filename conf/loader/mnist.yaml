@@ -1,7 +1,7 @@
 _target_: loaders.mnist.MNISTLoader
 
 batch_size: 512
-num_workers: 0
+num_workers: 8
 
 normalize:
   _target_: torchvision.transforms.Normalize

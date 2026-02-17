@@ -1,4 +1,4 @@
 _target_: loaders.motionsense.MSLoader
 
 batch_size: 512
-num_workers: 0
+num_workers: 8
