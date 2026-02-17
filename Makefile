@@ -38,7 +38,7 @@ debug: clean $(TEST_BIN)
 # Build and time the program with clean timing (stdout -> /dev/null)
 time: $(TARGET)
 	@echo "Timing $(TARGET)..."
-	@time -p sh -c './$(TARGET) > /dev/null'
+	@/usr/bin/time -p ./$(TARGET) > /dev/null 2>&1 || true
 
 clean:
 	rm -f $(TARGET) $(TEST_BIN) $(TENSORS)
