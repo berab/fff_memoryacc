@@ -3,7 +3,6 @@
 
 #include "fff.h"
 
-
 int main(void) {
     FILE *f = fopen(FILENAME, "rb");
     int target;
