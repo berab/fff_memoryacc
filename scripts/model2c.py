@@ -8,12 +8,13 @@ model_sizes = {
 }
 OUT_DIR = Path("models/")
 MODEL_DIR = Path("pretrained_models/")
+STATS_DIR = Path("fff_stats/")
 
 def tensor_to_c_array(tensor):
     """Convert PyTorch tensor to C array string"""
     return str(tensor.flatten().tolist()).replace("[", "{").replace("]", "}").replace("},", "},\n")
 
-def write_config(out_file, depth, leaf_width):
+def write_config(out_file, depth, leaf_width, test_leaf_targets):
     # Model Config & Params
     with open(out_file, "w") as f:
         # Config
@@ -21,6 +22,7 @@ def write_config(out_file, depth, leaf_width):
         f.write(f"#define LEAF_WIDTH {leaf_width}\n")
         f.write(f"#define N_LEAVES (1 << DEPTH)\n")
         f.write(f"#define N_NODES (N_LEAVES - 1)\n")
+        f.write(f"#define LT {tensor_to_c_array(test_leaf_targets)}\n")
 
 def write_weights(state_dict, out_file):
     # Model Config & Params
@@ -50,18 +52,20 @@ def main(state_dict_file: str):
 
     state_dict = torch.load(MODEL_DIR/f"{config_name}.pt", map_location="cpu", 
                             weights_only=True)
+    test_leaf_targets = torch.load(STATS_DIR/f"{config_name}_test_leaves.pt", 
+                                  map_location="cpu", weights_only=True)
 
     config_filename = f"{config_name}_conf.h"
     weights_filename = f"{config_name}_weights.h"
     out_filename = f"{config_name}.h"
 
-    write_config(OUT_DIR/config_filename, depth, leaf_width)
+    write_config(OUT_DIR/config_filename, depth, leaf_width, test_leaf_targets)
     write_weights(state_dict, OUT_DIR/weights_filename)
     with open(OUT_DIR / out_filename, "w") as f:
         f.write(f"#include \"{config_filename}\"\n")
         f.write(f"#include \"{weights_filename}\"")
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process file arguments.")
-    parser.add_argument('-c', '--config-name', required=True, default="mnist_d4_l16" ,help="Configuration name (e.g., 'mnist_d4_l16')")
+    parser.add_argument('-c', '--config-name', default="mnist_d4_l16" ,help="Configuration name (e.g., 'mnist_d4_l16')")
     config_name = parser.parse_args().config_name
     main(config_name)

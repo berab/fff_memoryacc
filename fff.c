@@ -12,12 +12,16 @@ static float lb2[N_LEAVES * OUT_FEATURES] = LB2;
 static uint8_t li[N_LEAVES] = LI;
 #endif
 
+// To simulate the all test set samples, we use precomputed leaf target indices
+static uint8_t lt[N_SAMPLES] = LT;
 
 float input[IN_FEATURES];
 float output[OUT_FEATURES];
 float hidden[LEAF_WIDTH];
 
-int argmax(float output[]) {
+volatile int g_sample_index = 0;
+
+int argmax() {
     int max_index = 0;
     float max_value = output[0];
     for (int i = 1; i < OUT_FEATURES; i++) {
@@ -38,14 +42,15 @@ float neuron(float weights[], float bias, float input[], int dim) {
 		return accumulator + bias;
 }
 
-void fff(float input[], float output[]) {
+void fff() {
     // ROUTING
-    int n = 0;
+    uint8_t n = 0;
     for (int i = 0; i < DEPTH; i++) {
         n = ROUTE(n, neuron(&nw[n * IN_FEATURES], nb[n], input, IN_FEATURES));
     }
     n -= N_NODES; // Convert node id to leaf id
                 
+    n = lt[g_sample_index]; // Fetch leaf id from precomputed target indices
     // FF
 #ifdef SORTED
     n = li[n]; // Fetch leaf id from memory order
@@ -58,5 +63,6 @@ void fff(float input[], float output[]) {
     for (int i = 0; i < OUT_FEATURES; i++) {
         output[i] = neuron(&lw2[(n * OUT_FEATURES + i) * LEAF_WIDTH], lb2[n * OUT_FEATURES + i], hidden, LEAF_WIDTH);
     }
-    argmax(output);
+    argmax();
+    g_sample_index++;
 }

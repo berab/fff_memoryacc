@@ -12,6 +12,6 @@
 extern float input[IN_FEATURES];
 extern float output[OUT_FEATURES];
 
-int argmax(float output[]);
+int argmax();
 float neuron(float weights[], float bias, float input[], int dim);
-void fff(float input[], float output[]);
+void fff();

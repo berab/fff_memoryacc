@@ -14,7 +14,7 @@ def tensor_to_c_array(tensor):
     """Convert PyTorch tensor to C array string"""
     return str(tensor.flatten().tolist()).replace("[", "{").replace("]", "}").replace("},", "},\n")
 
-def write_config(out_file, depth, leaf_width, new_leaf_indices):
+def write_config(out_file, depth, leaf_width, test_leaf_targets, new_leaf_indices):
     # Model Config & Params
     with open(out_file, "w") as f:
         # Config
@@ -22,6 +22,7 @@ def write_config(out_file, depth, leaf_width, new_leaf_indices):
         f.write(f"#define LEAF_WIDTH {leaf_width}\n")
         f.write(f"#define N_LEAVES (1 << DEPTH)\n")
         f.write(f"#define N_NODES (N_LEAVES - 1)\n")
+        f.write(f"#define LT {tensor_to_c_array(test_leaf_targets)}\n")
         f.write(f"#define LI {tensor_to_c_array(new_leaf_indices)}\n")
 
 def write_weights_sorted(state_dict, out_file, sorted_indices):
@@ -53,6 +54,8 @@ def main(config_name):
 
     state_dict = torch.load(MODEL_DIR/f"{config_name}.pt", map_location="cpu", 
                             weights_only=True)
+    test_leaf_targets = torch.load(STATS_DIR/f"{config_name}_test_leaves.pt", 
+                                  map_location="cpu", weights_only=True)
     new_leaf_indices = torch.load(STATS_DIR/f"{config_name}_val_new_leaf_indices.pt", 
                                   map_location="cpu", weights_only=True)
     sorted_indices = torch.load(STATS_DIR/f"{config_name}_val_leaves_sorted.pt", 
@@ -62,7 +65,7 @@ def main(config_name):
     weights_filename = f"{config_name}_weights_sorted.h"
     out_filename = f"{config_name}_sorted.h"
 
-    write_config(OUT_DIR/config_filename, depth, leaf_width, new_leaf_indices)
+    write_config(OUT_DIR/config_filename, depth, leaf_width, test_leaf_targets, new_leaf_indices)
     write_weights_sorted(state_dict, OUT_DIR/weights_filename, sorted_indices)
     with open(OUT_DIR / out_filename, "w") as f:
         f.write(f"#include \"{config_filename}\"\n")

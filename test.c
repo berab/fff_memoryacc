@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdint.h>
 #include <stdio.h>
 
 #include "datasets/mnist.h"
@@ -15,12 +16,16 @@ static float lb1[N_LEAVES * LEAF_WIDTH] = LB1;
 static float lw2[N_LEAVES * OUT_FEATURES * LEAF_WIDTH] = LW2;
 static float lb2[N_LEAVES * OUT_FEATURES] = LB2;
 
+// To simulate the all test set samples, we use precomputed leaf target indices
+static uint8_t lt[N_SAMPLES] = LT;
+
 float input[IN_FEATURES];
 float hidden[LEAF_WIDTH];
 float output[OUT_FEATURES];
 int targets[N_SAMPLES];
 int preds[N_SAMPLES];
 
+volatile int g_sample_index = 0;
 
 int argmax(void) {
     int max_idx = 0;
@@ -51,6 +56,8 @@ int fff(void) {
         n = ROUTE(n, neuron(&nw[n * IN_FEATURES], nb[n], input, IN_FEATURES));
     }
     n -= N_NODES; // Convert node id to leaf id
+    n = lt[g_sample_index]; // Fetch leaf id from precomputed target indices
+    g_sample_index++;
                 
     // FF
     // n = idx[n]; // TODO: Fetch leaf id from memory order
@@ -101,7 +108,6 @@ int main(void) {
     FILE *f = fopen(FILENAME, "rb");
     for (int i = 0; i < N_SAMPLES; ++i) {
         fread(input, sizeof(float), IN_FEATURES, f);
-        fff();
         preds[i] = fff();
     }
     fclose(f);
