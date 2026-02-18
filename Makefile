@@ -85,8 +85,6 @@ VPATH = $(SDK_PATH)/utils
 VPATH+=:src
 VPATH+=:src/models
 VPATH+=:src/datasets
-VPATH+=:src/parameters
-VPATH+=:src/utils
 VPATH+=:gcc
 
 SRC = am_resources.c
@@ -96,7 +94,7 @@ SRC += am_util_stdio.c
 SRC += am_util_string.c
 SRC += startup_gcc.c
 SRC += $(TARGET).c
-SRC += nn.c
+SRC += fff.c
 
 CSRC = $(filter %.c,$(SRC))
 ASRC = $(filter %.s,$(SRC))

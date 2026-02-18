@@ -1,9 +1,6 @@
 #include "am_mcu_apollo.h"
-
 #include "am_bsp.h"
 #include "am_util.h"
-
-#include "mnist.h"
 
 #include "fff.h"
 
@@ -57,8 +54,8 @@ int main(void) {
 #ifdef TIMING
         am_hal_timer_clear(TIMER_NUM);   // The clear function also starts the timer
 #endif
-        for (int i = 0; i < 100; i++) {
-            fff();
+        for (int i = 0; i < N_SAMPLES; i++) {
+            fff(input, output, i);
         }
 
 #ifdef TIMING
