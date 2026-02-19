@@ -1,4 +1,5 @@
 #include "fff.h"
+#include "mem.h"
 
 // Weights in TCM
 static float nw[N_NODES * IN_FEATURES] = NW;
@@ -9,14 +10,10 @@ static float lw2_1[N_LEAVES_TCM * OUT_FEATURES * LEAF_WIDTH] = LW2_1;
 static float lb2_1[N_LEAVES_TCM * OUT_FEATURES] = LB2_1;
 
 // Weights in SRAM
-__attribute__ ((section(".shared")))
-static float lw1_2[N_LEAVES_SRAM * LEAF_WIDTH * IN_FEATURES] = LW1_2;
-__attribute__ ((section(".shared")))
-static float lb1_2[N_LEAVES_SRAM * LEAF_WIDTH] = LB1_2;
-__attribute__ ((section(".shared")))
-static float lw2_2[N_LEAVES_SRAM * OUT_FEATURES * LEAF_WIDTH] = LW2_2;
-__attribute__ ((section(".shared")))
-static float lb2_2[N_LEAVES_SRAM * OUT_FEATURES] = LB2_2;
+SRAM static float lw1_2[N_LEAVES_SRAM * LEAF_WIDTH * IN_FEATURES] = LW1_2;
+SRAM static float lb1_2[N_LEAVES_SRAM * LEAF_WIDTH] = LB1_2;
+SRAM static float lw2_2[N_LEAVES_SRAM * OUT_FEATURES * LEAF_WIDTH] = LW2_2;
+SRAM static float lb2_2[N_LEAVES_SRAM * OUT_FEATURES] = LB2_2;
 #ifdef SORTED
 // Sorted leaf indices for memory access optimization based on leaf stats
 static uint8_t li[N_LEAVES] = LI;
@@ -77,7 +74,7 @@ void fff() {
         lw1 = lw1_2;
         lb1 = lb1_2;
         lw2 = lw2_2;
-        *lb2 = lb2_2;
+        lb2 = lb2_2;
     }
     float h;
     for (int i = 0; i < LEAF_WIDTH; i++) {

@@ -1,6 +1,9 @@
 # Acceleration on conditional NNs via memory caching: APOLLO4 Lite Blue EVB benchmarking
 
-Device: Apollo4 Blue Lite EVB
+## Requirements:
+- Apollo4 Blue Lite EVB
+- ARM GCC toolchain 15.2.1
+
 ## Make:
 ```bash
 make clean all
