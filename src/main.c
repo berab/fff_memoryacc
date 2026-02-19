@@ -54,8 +54,9 @@ int main(void) {
 #ifdef TIMING
         am_hal_timer_clear(TIMER_NUM);   // The clear function also starts the timer
 #endif
-        for (int i = 0; i < N_SAMPLES; i++) {
-            fff(input, output, i);
+        for (int i = 0; i < 1; i++) {
+        // for (int i = 0; i < N_SAMPLES; i++) {
+            fff();
         }
 
 #ifdef TIMING

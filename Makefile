@@ -78,7 +78,7 @@ INCLUDES+= -I$(SDK_PATH)/mcu/$(FAMILY)
 INCLUDES+= -I$(SDK_PATH)/mcu/$(FAMILY)/hal
 INCLUDES+= -I$(SDK_PATH)/utils
 INCLUDES+= -I$(SDK_PATH)/boards/$(BOARD)/bsp
-INCLUDES+= -Isrc -Isrc/models -Isrc/datasets -Isrc/parameters -Isrc/utils
+INCLUDES+= -Isrc -Isrc/datasets -Isrc/parameters -Isrc/utils
 INCLUDES+= -Igcc
 
 VPATH = $(SDK_PATH)/utils

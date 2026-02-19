@@ -66,16 +66,18 @@ void fff() {
 #ifdef SORTED
     n = li[n]; // Fetch leaf id from memory order
 #endif
-    float *lw1 = lw1_1;
-    float *lb1 = lb1_1;
-    float *lw2 = lw2_1;
-    float *lb2 = lb2_1;
-    if (n >= N_LEAVES_TCM) {
+    float *lw1, *lb1, *lw2, *lb2;
+    if (n < N_LEAVES_TCM) {
+        lw1 = lw1_1;
+        lb1 = lb1_1;
+        lw2 = lw2_1;
+        lb2 = lb2_1;
+    } else {
         n -= N_LEAVES_TCM; // Convert leaf id to SRAM index
         lw1 = lw1_2;
         lb1 = lb1_2;
         lw2 = lw2_2;
-        lb2 = lb2_2;
+        *lb2 = lb2_2;
     }
     float h;
     for (int i = 0; i < LEAF_WIDTH; i++) {
