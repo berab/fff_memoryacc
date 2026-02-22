@@ -16,6 +16,7 @@ class BaseExp(ABC):
         self.log_filename = hydra.core.hydra_config.HydraConfig.get().job.name+'.log'
         self.overrides_config = self.out_dir/'.hydra/overrides.yaml'
         self.exp_name: str
+        self.model_dir = Path("data/pretrained_models")
 
     def start_run(self, seed: int):
         mlflow.log_param('seed', seed)
@@ -113,11 +114,15 @@ class BaseTrainExp(BaseExp):
 
     def log_model(self) -> None:
         # Log model
+        d, l = self.model.depth, self.model.leaf_width
         self.model.to('cpu')
         # TODO: Rename model with mlflow id then easy to follow maybe?
-        torch.save(self.model, self.out_dir/'model.pt') # TODO: Add more checkpoints
-        torch.save(self.model.state_dict(), self.out_dir/'state_dict.pt') # TODO: Add more checkpoints
+        torch.save(self.model, self.out_dir/"model.pt") # TODO: Add more checkpoints
+        torch.save(self.model.state_dict(), self.out_dir/"state_dict.pt") # TODO: Add more checkpoints
+        torch.save(self.model, self.model_dir/f"mnist_d{d}_l{l}_model.pt") # TODO: Add more checkpoints
+        torch.save(self.model.state_dict(), self.model_dir/f"mnist_d{d}_l{l}.pt") # TODO: Add more checkpoints
         mlflow.log_artifact(str(self.out_dir/'model.pt'))
+        mlflow.log_artifact(str(self.out_dir/'state_dict.pt'))
         mlflow.log_artifact(str(self.out_dir/'state_dict.pt'))
 
     def setup(self, mfwrapper: MLFlow, partial_model, loader, optim, epochs, device):
