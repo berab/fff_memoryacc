@@ -1,4 +1,4 @@
-# Hydra template
+# FFF memory acceleration PyTorch branch
 
 ### Pick your config file:
 ```bash
