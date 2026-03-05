@@ -54,9 +54,15 @@ def get_config(config_name):
 def get_new_leaf_order(leaves: list[int], depth: int):
     n_leaves = 2 ** depth
     leaf_stats = torch.tensor(get_leaf_stats(leaves, n_leaves))
-    leaf_indices_sorted = torch.sort(leaf_stats, descending=True).indices
+    leaf_stats_sorted, leaf_indices_sorted = torch.sort(leaf_stats, descending=True)
     new_leaf_order = torch.empty_like(leaf_indices_sorted)
     new_leaf_order[leaf_indices_sorted] = torch.arange(n_leaves)
+    print(f"Val leaf stats: {leaf_stats}")
+    print(f"Val leaf stats sorted: {leaf_stats_sorted}")
+    tcm, ram = leaf_stats[:6].sum(), leaf_stats[6:].sum()
+    tcm_sorted, ram_sorted = leaf_stats_sorted[:6].sum(), leaf_stats_sorted[6:].sum()
+    print(f"usage | TCM: {tcm}, RAM: {ram}")
+    print(f"usage sortred | TCM: {tcm_sorted}, RAM: {ram_sorted}")
     return leaf_indices_sorted, new_leaf_order
 
 def main(config_name):

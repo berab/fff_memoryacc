@@ -250,7 +250,7 @@ ramcount:
 	COUNT=$$(JLinkExe -device $(DEVICE) -if SWD -speed 4000 -CommandFile jlink/read_timer.jlink 2>&1 | grep "$$ADDR =" | cut -d' ' -f3); \
     COUNT=$$(printf "%d" 0x$$COUNT); \
 	echo "RAM access count: $$COUNT"; \
-	echo "$$COUNT" >> .ram_count.out
+	echo "$$COUNT" > .ram_count.out
 	echo "Results are saved into .ram_count.out"
 
 tcmcount:
@@ -268,7 +268,7 @@ tcmcount:
 	COUNT=$$(JLinkExe -device $(DEVICE) -if SWD -speed 4000 -CommandFile jlink/read_timer.jlink 2>&1 | grep "$$ADDR =" | cut -d' ' -f3); \
     COUNT=$$(printf "%d" 0x$$COUNT); \
 	echo "TCM access count: $$COUNT"; \
-	echo "$$COUNT" >> .tcm_count.out
+	echo "$$COUNT" > .tcm_count.out
 	echo "Results are saved into .tcm_count.out"
 
 mcount: tcmcount ramcount
