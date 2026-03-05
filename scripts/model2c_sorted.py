@@ -10,11 +10,15 @@ OUT_DIR = Path("models/")
 MODEL_DIR = Path("pretrained_models/")
 STATS_DIR = Path("fff_stats/")
 
-def tensor_to_c_array(tensor):
+def get_leaf_stats(leaves, n_leaves) -> list[float]:
+    stats = [leaves.count(i)/len(leaves) for i in range(n_leaves)]
+    return stats
+
+def tensor_to_c_array(tensor: torch.Tensor):
     """Convert PyTorch tensor to C array string"""
     return str(tensor.flatten().tolist()).replace("[", "{").replace("]", "}").replace("},", "},\n")
 
-def write_config(out_file, depth, leaf_width, new_leaf_indices):
+def write_config(out_file, depth, leaf_width, leaves: torch.Tensor, new_leaf_order: torch.Tensor):
     # Model Config & Params
     with open(out_file, "w") as f:
         # Config
@@ -22,7 +26,8 @@ def write_config(out_file, depth, leaf_width, new_leaf_indices):
         f.write(f"#define LEAF_WIDTH {leaf_width}\n")
         f.write(f"#define N_LEAVES (1 << DEPTH)\n")
         f.write(f"#define N_NODES (N_LEAVES - 1)\n")
-        f.write(f"#define LI {tensor_to_c_array(new_leaf_indices)}\n")
+        f.write(f"#define LT {tensor_to_c_array(leaves)}\n")
+        f.write(f"#define LI {tensor_to_c_array(new_leaf_order)}\n")
 
 def write_weights_sorted(state_dict, out_file, sorted_indices):
     # Model Config & Params
@@ -38,7 +43,6 @@ def write_weights_sorted(state_dict, out_file, sorted_indices):
         f.write(f"#define LW2 {tensor_to_c_array(lw2.transpose(1, 2))}\n")
         f.write(f"#define LB2 {tensor_to_c_array(lb2)}\n\n")
 
-
 def get_config(config_name):
     match = re.search(r"_d(\d+)_l(\d+)", config_name)
     if match:
@@ -47,22 +51,29 @@ def get_config(config_name):
     else:
         raise ValueError("Filename does not match expected pattern.")
 
+def get_new_leaf_order(leaves: list[int], depth: int):
+    n_leaves = 2 ** depth
+    leaf_stats = torch.tensor(get_leaf_stats(leaves, n_leaves))
+    leaf_indices_sorted = torch.sort(leaf_stats, descending=True).indices
+    new_leaf_order = torch.empty_like(leaf_indices_sorted)
+    new_leaf_order[leaf_indices_sorted] = torch.arange(n_leaves)
+    return leaf_indices_sorted, new_leaf_order
+
 def main(config_name):
     OUT_DIR.mkdir(exist_ok=True)
     depth, leaf_width = get_config(config_name)
 
     state_dict = torch.load(MODEL_DIR/f"{config_name}.pt", map_location="cpu", 
                             weights_only=True)
-    new_leaf_indices = torch.load(STATS_DIR/f"{config_name}_val_new_leaf_indices.pt", 
-                                  map_location="cpu", weights_only=True)
-    sorted_indices = torch.load(STATS_DIR/f"{config_name}_val_leaves_sorted.pt", 
-                                map_location="cpu", weights_only=True)
+    leaves: list[int] = torch.load(STATS_DIR/f"{config_name}_leaves.pt", map_location="cpu", 
+                                     weights_only=True)
+    sorted_indices, new_leaf_order = get_new_leaf_order(leaves, int(depth))
 
     config_filename = f"{config_name}_conf_sorted.h"
     weights_filename = f"{config_name}_weights_sorted.h"
     out_filename = f"{config_name}_sorted.h"
 
-    write_config(OUT_DIR/config_filename, depth, leaf_width, new_leaf_indices)
+    write_config(OUT_DIR/config_filename, depth, leaf_width, torch.tensor(leaves), new_leaf_order)
     write_weights_sorted(state_dict, OUT_DIR/weights_filename, sorted_indices)
     with open(OUT_DIR / out_filename, "w") as f:
         f.write(f"#include \"{config_filename}\"\n")
@@ -70,6 +81,7 @@ def main(config_name):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process file arguments.")
-    parser.add_argument('-c', '--config-name', default="mnist_d4_l16" ,help="Configuration name (e.g., 'mnist_d4_l16')")
+    parser.add_argument('-c', '--config-name', default="mnist_d4_l16", 
+                        help="Configuration name (e.g., 'mnist_d4_l16')")
     config_name = parser.parse_args().config_name
     main(config_name)

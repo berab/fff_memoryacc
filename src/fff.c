@@ -18,9 +18,13 @@ SRAM static float lb2_2[N_LEAVES_SRAM * OUT_FEATURES] = LB2_2;
 // Sorted leaf indices for memory access optimization based on leaf stats
 static uint8_t li[N_LEAVES] = LI;
 #endif
+#ifdef MEMCHECK
+volatile uint32_t g_TCMCount = 0;
+volatile uint32_t g_RAMCount = 0;
+#endif
 
 // To simulate the all test set samples, we use precomputed leaf target indices
-// static uint8_t lt[N_SAMPLES] = LT;
+static uint8_t lt[N_SAMPLES] = LT;
 
 float input[IN_FEATURES] = INPUT;
 float output[OUT_FEATURES];
@@ -55,9 +59,8 @@ void fff() {
     for (int i = 0; i < DEPTH; i++) {
         n = ROUTE(n, neuron(&nw[n * IN_FEATURES], nb[n], input, IN_FEATURES)); //TOOD: Check if MACRO hurts. idk thsi apollo is weird somtimes
     }
-    n -= N_NODES; // Convert node id to leaf id
-                
-    // n = lt[g_sample_index]; // Fetch leaf id from precomputed target indices
+    // n -= N_NODES; // Convert node id to leaf id
+    n = lt[g_sample_index]; // Fetch leaf id from precomputed target indices
     g_sample_index++;
     // FF
 #ifdef SORTED
@@ -69,12 +72,18 @@ void fff() {
         lb1 = lb1_1;
         lw2 = lw2_1;
         lb2 = lb2_1;
+#ifdef MEMCHECK
+        g_TCMCount++;
+#endif
     } else {
         n -= N_LEAVES_TCM; // Convert leaf id to SRAM index
         lw1 = lw1_2;
         lb1 = lb1_2;
         lw2 = lw2_2;
         lb2 = lb2_2;
+#ifdef MEMCHECK
+        g_RAMCount++;
+#endif
     }
     float h;
     for (int i = 0; i < LEAF_WIDTH; i++) {

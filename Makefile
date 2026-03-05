@@ -7,7 +7,14 @@ CFAMILY=APOLLO4l
 PACKAGE=AM_PACKAGE_BGA
 BOARD=apollo4l_blue_evb
 DEVICE=AMAP42KL-KBR
-
+CSV_PATH=csv_files/
+ifdef SORTED
+TIME_CSVFILE=time_mnist_sorted.csv
+MEM_CSVFILE=mem_mnist_sorted.csv
+else
+TIME_CSVFILE=time_mnist.csv
+MEM_CSVFILE=mem_mnist.csv
+endif
 # All makefiles use this to find the top level directory.
 SDK_PATH := $(HOME)/apps/AmbiqSuite_R4.5.0
 SWROOT ?= $(SDK_PATH)
@@ -122,8 +129,14 @@ endif
 ifdef LED
 CFLAGS+= -DLED
 endif
+ifdef MEMCHECK
+CFLAGS+= -DMEMCHECK
+endif
+
+FREQ=96000000
 ifdef HIGH_PERF
 CFLAGS+= -DHIGH_PERF
+FREQ=192000000
 endif
 
 LFLAGS = -mthumb -mcpu=$(CPU) -mfpu=$(FPU) -mfloat-abi=$(FABI)
@@ -205,7 +218,7 @@ bear:
 
 tcount:
 	@echo "Reading timer count from device..."
-	$(Q) ADDR=$$(arm-none-eabi-nm $(CONFIG)/$(TARGET).axf | grep g_TimerCount | awk '{print $$1}'); \
+	$(Q) ADDR=$$(arm-none-eabi-nm $(CONFIG)/$(TARGET).axf | grep g_TimerCount | awk '{print $$1}' | tr '[:lower:]' '[:upper:]'); \
 	echo "Timer counter address: $$ADDR"; \
 	if [ -z "$$ADDR" ]; then \
 		echo "Error: g_TimerCount not found. Did you compile with TIMING=1?"; \
@@ -215,4 +228,51 @@ tcount:
 	echo "halt" >> jlink/read_timer.jlink; \
 	echo "mem32 $$ADDR 1" >> jlink/read_timer.jlink; \
 	echo "q" >> jlink/read_timer.jlink; \
-	JLinkExe -device $(DEVICE) -if SWD -speed 4000 -CommandFile jlink/read_timer.jlink 2>&1 | grep "$$ADDR =" | cut -d' ' -f3
+	CYCLES=$$(JLinkExe -device $(DEVICE) -if SWD -speed 4000 -CommandFile jlink/read_timer.jlink 2>&1 | grep "$$ADDR =" | cut -d' ' -f3); \
+    CYCLES=$$(printf "%d" 0x$$CYCLES); \
+	TIME=$$(echo "1000 * $$CYCLES / $(FREQ)" | bc -l); \
+	echo "Cycles: $$CYCLES | Time: $$TIME ms"; \
+	echo "4,16,$(FREQ),$$CYCLES,$$TIME" >> $(CSV_PATH)/$(TIME_CSVFILE)
+	echo "Results are saved into $(CSV_PATH)/$(TIME_CSVFILE)"
+
+ramcount:
+	@echo "Reading RAM count from device..."
+	$(Q) ADDR=$$(arm-none-eabi-nm $(CONFIG)/$(TARGET).axf | grep g_RAMCount | awk '{print $$1}' | tr '[:lower:]' '[:upper:]'); \
+	echo "RAM counter address: $$ADDR"; \
+	if [ -z "$$ADDR" ]; then \
+		echo "Error: g_RAMCount not found. Did you compile with MEMCHECK=1?"; \
+		exit 1; \
+	fi; \
+	echo "r" > jlink/read_timer.jlink; \
+	echo "halt" >> jlink/read_timer.jlink; \
+	echo "mem32 $$ADDR 1" >> jlink/read_timer.jlink; \
+	echo "q" >> jlink/read_timer.jlink; \
+	COUNT=$$(JLinkExe -device $(DEVICE) -if SWD -speed 4000 -CommandFile jlink/read_timer.jlink 2>&1 | grep "$$ADDR =" | cut -d' ' -f3); \
+    COUNT=$$(printf "%d" 0x$$COUNT); \
+	echo "RAM access count: $$COUNT"; \
+	echo "$$COUNT" >> .ram_count.out
+	echo "Results are saved into .ram_count.out"
+
+tcmcount:
+	@echo "Reading timer count from device..."
+	$(Q) ADDR=$$(arm-none-eabi-nm $(CONFIG)/$(TARGET).axf | grep g_TCMCount | awk '{print $$1}' | tr '[:lower:]' '[:upper:]'); \
+	echo "TCMcounter address: $$ADDR"; \
+	if [ -z "$$ADDR" ]; then \
+		echo "Error: g_TCMCount not found. Did you compile with MEMCHECK=1?"; \
+		exit 1; \
+	fi; \
+	echo "r" > jlink/read_timer.jlink; \
+	echo "halt" >> jlink/read_timer.jlink; \
+	echo "mem32 $$ADDR 1" >> jlink/read_timer.jlink; \
+	echo "q" >> jlink/read_timer.jlink; \
+	COUNT=$$(JLinkExe -device $(DEVICE) -if SWD -speed 4000 -CommandFile jlink/read_timer.jlink 2>&1 | grep "$$ADDR =" | cut -d' ' -f3); \
+    COUNT=$$(printf "%d" 0x$$COUNT); \
+	echo "TCM access count: $$COUNT"; \
+	echo "$$COUNT" >> .tcm_count.out
+	echo "Results are saved into .tcm_count.out"
+
+mcount: tcmcount ramcount
+	TCMCOUNT=$$(cat .tcm_count.out); \
+	RAMCOUNT=$$(cat .ram_count.out); \
+	echo "4,16,$(FREQ),$$TCMCUONT,$$RAMCOUNT" >> $(CSV_PATH)/$(MEM_CSVFILE)
+	echo "Results are saved into $(CSV_PATH)/$(MEM_CSVFILE)"
