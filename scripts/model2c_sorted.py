@@ -2,6 +2,7 @@ import regex as re
 import argparse
 import torch
 from pathlib import Path
+import pandas as pd
 
 model_sizes = {
     784: "mnist",
@@ -61,9 +62,11 @@ def get_new_leaf_order(leaves: list[int], depth: int):
     print(f"Val leaf stats sorted: {leaf_stats_sorted}")
     tcm, ram = leaf_stats[:6].sum(), leaf_stats[6:].sum()
     tcm_sorted, ram_sorted = leaf_stats_sorted[:6].sum(), leaf_stats_sorted[6:].sum()
+    print(f"new leaf order: {new_leaf_order}")
+    print(f"new leaf order?: {leaf_indices_sorted}")
     print(f"usage | TCM: {tcm}, RAM: {ram}")
     print(f"usage sortred | TCM: {tcm_sorted}, RAM: {ram_sorted}")
-    return leaf_indices_sorted, new_leaf_order
+    return leaf_stats, leaf_indices_sorted, new_leaf_order
 
 def main(config_name):
     OUT_DIR.mkdir(exist_ok=True)
@@ -73,17 +76,22 @@ def main(config_name):
                             weights_only=True)
     leaves: list[int] = torch.load(STATS_DIR/f"{config_name}_leaves.pt", map_location="cpu", 
                                      weights_only=True)
-    sorted_indices, new_leaf_order = get_new_leaf_order(leaves, int(depth))
+    leaf_stats, sorted_indices, new_leaf_order = get_new_leaf_order(leaves, int(depth))
 
     config_filename = f"{config_name}_conf_sorted.h"
     weights_filename = f"{config_name}_weights_sorted.h"
     out_filename = f"{config_name}_sorted.h"
 
-    write_config(OUT_DIR/config_filename, depth, leaf_width, torch.tensor(leaves), new_leaf_order)
+    leaves_t, _ = torch.tensor(leaves).sort()
+    write_config(OUT_DIR/config_filename, depth, leaf_width, leaves_t, new_leaf_order)
     write_weights_sorted(state_dict, OUT_DIR/weights_filename, sorted_indices)
     with open(OUT_DIR / out_filename, "w") as f:
         f.write(f"#include \"{config_filename}\"\n")
         f.write(f"#include \"{weights_filename}\"")
+
+    leaf_stats_df = pd.DataFrame({"usage": leaf_stats.tolist()})
+    leaf_stats_df.index.name = "leaf"
+    leaf_stats_df.to_csv("val_leaf_stats.csv")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process file arguments.")

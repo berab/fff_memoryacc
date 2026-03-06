@@ -28,7 +28,7 @@ uint32_t timer_init(uint32_t ui32TimerNum) {
     return ui32Status;
 } // timer_init()
 #endif
- 
+
 
 // Main
 int main(void) {
@@ -54,7 +54,8 @@ int main(void) {
 #ifdef TIMING
         am_hal_timer_clear(TIMER_NUM);   // The clear function also starts the timer
 #endif
-        for (int i = 0; i < N_SAMPLES; i++) {
+        for (int i = 0; i < N_VAL_SAMPLES; i++) {
+            // for (int i = 0; i < N_SAMPLES; i++) {
             fff();
         }
 
@@ -67,5 +68,5 @@ int main(void) {
 #endif
         // Go to Deep Sleep.
         am_hal_sysctrl_sleep(AM_HAL_SYSCTRL_SLEEP_DEEP);
+        }
     }
-}

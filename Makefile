@@ -7,13 +7,13 @@ CFAMILY=APOLLO4l
 PACKAGE=AM_PACKAGE_BGA
 BOARD=apollo4l_blue_evb
 DEVICE=AMAP42KL-KBR
-CSV_PATH=csv_files/
+CSV_PATH=csv_files
 ifdef SORTED
-TIME_CSVFILE=time_mnist_sorted.csv
-MEM_CSVFILE=mem_mnist_sorted.csv
+TIME_CSVFILE=time_mnistval_sorted.csv
+MEM_CSVFILE=mem_mnistval_sorted.csv
 else
-TIME_CSVFILE=time_mnist.csv
-MEM_CSVFILE=mem_mnist.csv
+TIME_CSVFILE=time_mnistval.csv
+MEM_CSVFILE=mem_mnistval.csv
 endif
 # All makefiles use this to find the top level directory.
 SDK_PATH := $(HOME)/apps/AmbiqSuite_R4.5.0
@@ -123,6 +123,9 @@ CFLAGS+= $(DEFINES)
 CFLAGS+= $(INCLUDES)
 
 # Optional features
+ifdef SORTED
+CFLAGS+= -DSORTED
+endif
 ifdef TIMING
 CFLAGS+= -DTIMING
 endif
@@ -230,13 +233,13 @@ tcount:
 	echo "q" >> jlink/read_timer.jlink; \
 	CYCLES=$$(JLinkExe -device $(DEVICE) -if SWD -speed 4000 -CommandFile jlink/read_timer.jlink 2>&1 | grep "$$ADDR =" | cut -d' ' -f3); \
     CYCLES=$$(printf "%d" 0x$$CYCLES); \
-	TIME=$$(echo "1000 * $$CYCLES / $(FREQ)" | bc -l); \
-	echo "Cycles: $$CYCLES | Time: $$TIME ms"; \
+	TIME=$$(echo "16 * $$CYCLES / $(FREQ)" | bc -l); \
+	echo "Cycles: $$CYCLES | Time: $$TIME s"; \
 	echo "4,16,$(FREQ),$$CYCLES,$$TIME" >> $(CSV_PATH)/$(TIME_CSVFILE)
 	echo "Results are saved into $(CSV_PATH)/$(TIME_CSVFILE)"
 
 ramcount:
-	@echo "Reading RAM count from device..."
+	@echo "Reading RAM access count from device..."
 	$(Q) ADDR=$$(arm-none-eabi-nm $(CONFIG)/$(TARGET).axf | grep g_RAMCount | awk '{print $$1}' | tr '[:lower:]' '[:upper:]'); \
 	echo "RAM counter address: $$ADDR"; \
 	if [ -z "$$ADDR" ]; then \
@@ -254,9 +257,9 @@ ramcount:
 	echo "Results are saved into .ram_count.out"
 
 tcmcount:
-	@echo "Reading timer count from device..."
+	@echo "Reading TCM access count from device..."
 	$(Q) ADDR=$$(arm-none-eabi-nm $(CONFIG)/$(TARGET).axf | grep g_TCMCount | awk '{print $$1}' | tr '[:lower:]' '[:upper:]'); \
-	echo "TCMcounter address: $$ADDR"; \
+	echo "TCM counter address: $$ADDR"; \
 	if [ -z "$$ADDR" ]; then \
 		echo "Error: g_TCMCount not found. Did you compile with MEMCHECK=1?"; \
 		exit 1; \
@@ -271,8 +274,23 @@ tcmcount:
 	echo "$$COUNT" > .tcm_count.out
 	echo "Results are saved into .tcm_count.out"
 
-mcount: tcmcount ramcount
-	TCMCOUNT=$$(cat .tcm_count.out); \
-	RAMCOUNT=$$(cat .ram_count.out); \
-	echo "4,16,$(FREQ),$$TCMCUONT,$$RAMCOUNT" >> $(CSV_PATH)/$(MEM_CSVFILE)
+mcount:
+	@echo "Reading RAM access count from device..."
+	$(Q) SADDR=$$(arm-none-eabi-nm $(CONFIG)/$(TARGET).axf | grep g_RAMCount | awk '{print $$1}' | tr '[:lower:]' '[:upper:]'); \
+	TADDR=$$(arm-none-eabi-nm $(CONFIG)/$(TARGET).axf | grep g_TCMCount | awk '{print $$1}' | tr '[:lower:]' '[:upper:]'); \
+	echo "RAM counter address: $$SADDR"; \
+	echo "TCM counter address: $$TADDR"; \
+	echo "r" > jlink/read_timer.jlink; \
+	echo "halt" >> jlink/read_timer.jlink; \
+	echo "mem32 $$SADDR 1" >> jlink/read_timer.jlink; \
+	echo "mem32 $$TADDR 1" >> jlink/read_timer.jlink; \
+	echo "q" >> jlink/read_timer.jlink; \
+	COUNTS=$$(JLinkExe -device $(DEVICE) -if SWD -speed 4000 -CommandFile jlink/read_timer.jlink 2>&1 | grep -e "$$SADDR =" -e "$$TADDR =" | cut -d' ' -f3); \
+	SCOUNT=$$(echo $$COUNTS | cut -d' ' -f1); \
+	TCOUNT=$$(echo $$COUNTS | cut -d' ' -f2); \
+    SCOUNT=$$(printf "%d" 0x$$SCOUNT); \
+    TCOUNT=$$(printf "%d" 0x$$TCOUNT); \
+	echo "RAM usage: $$SCOUNT"; \
+	echo "TCM usage: $$TCOUNT"; \
+	echo "4,16,$(FREQ),$$TCOUNT,$$SCOUNT" >> $(CSV_PATH)/$(MEM_CSVFILE)
 	echo "Results are saved into $(CSV_PATH)/$(MEM_CSVFILE)"

@@ -1,11 +1,8 @@
 #include <stdint.h>
+#include <am_hal_global.h> // Includes sram section
 
 #include "mnist.h"
-#ifdef SORTED
-#include "mnist_d4_l16_sorted.h"
-#else
 #include "mnist_d4_l16.h"
-#endif
 
 #define ROUTE(n, p) (p >= 0) ? (2 * n + 2) : (2 * n + 1)
 #define RELU(x) ((x) > 0 ? (x) : 0)

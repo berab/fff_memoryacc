@@ -1,5 +1,4 @@
 #include "fff.h"
-#include "mem.h"
 
 // Weights in TCM
 static float nw[N_NODES * IN_FEATURES] = NW;
@@ -10,10 +9,10 @@ static float lw2_1[N_LEAVES_TCM * OUT_FEATURES * LEAF_WIDTH] = LW2_1;
 static float lb2_1[N_LEAVES_TCM * OUT_FEATURES] = LB2_1;
 
 // Weights in SRAM
-SRAM static float lw1_2[N_LEAVES_SRAM * LEAF_WIDTH * IN_FEATURES] = LW1_2;
-SRAM static float lb1_2[N_LEAVES_SRAM * LEAF_WIDTH] = LB1_2;
-SRAM static float lw2_2[N_LEAVES_SRAM * OUT_FEATURES * LEAF_WIDTH] = LW2_2;
-SRAM static float lb2_2[N_LEAVES_SRAM * OUT_FEATURES] = LB2_2;
+AM_SHARED_RW static float lw1_2[N_LEAVES_SRAM * LEAF_WIDTH * IN_FEATURES] = LW1_2;
+AM_SHARED_RW static float lb1_2[N_LEAVES_SRAM * LEAF_WIDTH] = LB1_2;
+AM_SHARED_RW static float lw2_2[N_LEAVES_SRAM * OUT_FEATURES * LEAF_WIDTH] = LW2_2;
+AM_SHARED_RW static float lb2_2[N_LEAVES_SRAM * OUT_FEATURES] = LB2_2;
 #ifdef SORTED
 // Sorted leaf indices for memory access optimization based on leaf stats
 static uint8_t li[N_LEAVES] = LI;
@@ -30,7 +29,7 @@ float input[IN_FEATURES] = INPUT;
 float output[OUT_FEATURES];
 float hidden[LEAF_WIDTH];
 
-volatile int g_sample_index = 0;
+int g_sample_index = 0;
 
 int argmax() {
     int max_index = 0;
@@ -60,27 +59,28 @@ void fff() {
         n = ROUTE(n, neuron(&nw[n * IN_FEATURES], nb[n], input, IN_FEATURES)); //TOOD: Check if MACRO hurts. idk thsi apollo is weird somtimes
     }
     // n -= N_NODES; // Convert node id to leaf id
-    n = lt[g_sample_index]; // Fetch leaf id from precomputed target indices
+    // n = lt[g_sample_index]; // Fetch leaf id from precomputed target indices
+    n = 12;
     g_sample_index++;
     // FF
 #ifdef SORTED
     n = li[n]; // Fetch leaf id from memory order
 #endif
     float *lw1, *lb1, *lw2, *lb2;
-    if (n < N_LEAVES_TCM) {
-        lw1 = lw1_1;
-        lb1 = lb1_1;
-        lw2 = lw2_1;
-        lb2 = lb2_1;
-#ifdef MEMCHECK
-        g_TCMCount++;
-#endif
-    } else {
-        n -= N_LEAVES_TCM; // Convert leaf id to SRAM index
+    if (n >= N_LEAVES_TCM) {
         lw1 = lw1_2;
         lb1 = lb1_2;
         lw2 = lw2_2;
         lb2 = lb2_2;
+        n -= N_LEAVES_TCM; // Convert leaf id to SRAM index
+#ifdef MEMCHECK
+        g_TCMCount++;
+#endif
+    } else {
+        lw1 = lw1_1;
+        lb1 = lb1_1;
+        lw2 = lw2_1;
+        lb2 = lb2_1;
 #ifdef MEMCHECK
         g_RAMCount++;
 #endif
