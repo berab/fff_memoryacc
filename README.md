@@ -3,6 +3,7 @@
 ## Requirements:
 - Apollo4 Blue Lite EVB
 - ARM GCC toolchain 15.2.1
+- JLink GDB Server
 
 ## Compile FFF with memory acceleration
 ```bash
