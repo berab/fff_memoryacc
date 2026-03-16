@@ -4,25 +4,24 @@
 - Apollo4 Blue Lite EVB
 - ARM GCC toolchain 15.2.1
 
-## Make:
+## Compile FFF with memory acceleration
 ```bash
-make clean all
+make clean all SORTED=1
 ```
 
-## RUN JLink GDB Server:
+## Run debuggin 
 ```bash
-JLinkGDBServerCLExe -singlerun -nogui -port 61234 -device AMAP42KL-KBR
+make clean all debug SORTED=1
 ```
 
-## Connect GDB to the Server (.gdbinit is autocreated):
+## Run latency benchmarking 
 ```bash
-gdb-multiarch
+make clean all flash SORTED=1 TIMING=1
+make tcount
 ```
 
-## Run FFF 
-```bash
-make clean all
-```
+## Makefile 
+Please check other features in Makefile
 
 ## Get MEM info 
 ```bash
