@@ -1,0 +1,13 @@
+_target_: utils.mlflow.MLFlow
+server: local # local or dagshub
+username: name
+token: token
+exp: exp_name
+proj_name: ${proj_name}
+
+env:
+  vars: 
+    - MLFLOW_TRACKING_URI
+  vals:
+    - file:data/mlruns
+ 
