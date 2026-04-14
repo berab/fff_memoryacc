@@ -45,6 +45,7 @@ class Main:
     proj_name: str
     epochs: int
     seed: int
+    reg_alpha: float
 
 @hydra.main(config_path="../conf/", config_name="main", version_base='1.3')
 def main(cfg: DictConfig):

@@ -76,7 +76,7 @@ class FFF(nn.Module):
         final_logits = new_logits.sum(dim=1)                # (batch_size, self.out_features)
 
         final_logits = final_logits.view(*original_shape[:-1], self.out_features)   # (..., self.out_features)
-        return final_logits
+        return final_logits, current_mixture
 
     def forward(self, x: torch.Tensor):
         if self.training:
@@ -119,7 +119,7 @@ class FFF(nn.Module):
             ).squeeze(-2)                                   # (1, self.out_features)
 
 
-        out_logits = new_logits.view(*original_shape[:-1], self.out_features), leaves.view(*original_shape[:-1]) # (..., self.out_features), (...,)
+        out_logits, leaves = new_logits.view(*original_shape[:-1], self.out_features), leaves.view(*original_shape[:-1]) # (..., self.out_features), (...,)
         if return_leaves:
             return leaves
         return out_logits

@@ -15,6 +15,7 @@ defaults:
 
 seed: 47
 epochs: 50
+reg_alpha: 0.0 # 0.02
 
 device: 
   _target_: torch.device

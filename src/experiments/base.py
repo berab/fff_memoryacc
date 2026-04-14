@@ -103,7 +103,7 @@ class BaseTrainExp(BaseExp):
 
     def run(self, cfg):
         with EmissionsTracker(output_dir=self.out_dir, log_level="error"):
-            self.setup(cfg.mlflow, cfg.model, cfg.loader, cfg.optim, cfg.epochs, cfg.device)
+            self.setup(cfg.mlflow, cfg.model, cfg.loader, cfg.optim, cfg.epochs, cfg.device, cfg.reg_alpha)
             self.start_run(cfg.seed)
             self.log_exp(self.run_exp())
             self.end_run()
@@ -125,7 +125,7 @@ class BaseTrainExp(BaseExp):
         mlflow.log_artifact(str(self.out_dir/'state_dict.pt'))
         mlflow.log_artifact(str(self.out_dir/'state_dict.pt'))
 
-    def setup(self, mfwrapper: MLFlow, partial_model, loader, optim, epochs, device):
+    def setup(self, mfwrapper: MLFlow, partial_model, loader, optim, epochs, device, reg_alpha):
         # MLFlow setup
         mfwrapper.start()
         # Model and optim.setup
@@ -136,3 +136,4 @@ class BaseTrainExp(BaseExp):
         self.loader = loader
         self.device = device
         self.epochs = epochs
+        self.reg_alpha = reg_alpha

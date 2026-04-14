@@ -14,3 +14,22 @@ def get_leaf_stats(leaves, n_leaves) -> list[float]:
     s = [leaves.count(i) for i in range(n_leaves)]
     stats = [leaves.count(i)/len(leaves) for i in range(n_leaves)]
     return stats
+
+@torch.no_grad()
+def get_forest_leaves(model, loader, device):
+    model.eval()
+    leaves = [[] for n in range(model.n_trees)]
+    for inputs, targets in loader:
+        inputs, targets = inputs.to(device), targets.to(device)
+        all_leaves = model.eval_forward(inputs, return_leaves=True)
+        for n in range(model.n_trees):
+            leaves[n] += all_leaves[:, n].tolist()
+    return leaves 
+
+def get_forest_leaf_stats(leaves, n_leaves) -> list[float]:
+    forest_stats = []
+    for tree_leaves in leaves:
+        s = [tree_leaves.count(i) for i in range(n_leaves)]
+        stats = [tree_leaves.count(i)/len(tree_leaves) for i in range(n_leaves)]
+        forest_stats.append(stats)
+    return forest_stats
