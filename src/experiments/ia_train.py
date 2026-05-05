@@ -59,6 +59,13 @@ class IATrain(BaseTrainExp):
 
         logging.info(f"Val leaf stats: {val_leaf_stats}")
         test_leaves = get_leaves(self.model, self.loader.test, self.device)
+        test_leaf_stats = torch.tensor(get_leaf_stats(test_leaves, self.model.n_leaves))
+
+        test_leaf_std = torch.std(test_leaf_stats)
+        val_leaf_std = torch.std(val_leaf_stats)
+        mlflow.log_metric("test_leaf_std", test_leaf_std.item())
+        mlflow.log_metric("val_leaf_std", val_leaf_std.item())
+        logging.info(f"Test leaf std: {test_leaf_std}, Val leaf std: {val_leaf_std}")
 
         torch.save(val_leaf_stats, self.out_dir/f"leaf_stats.pt") # TODO: Add more checkpoints
         torch.save(torch.tensor(test_leaves), self.out_dir/f"test_leaves.pt") # TODO: Add more checkpoints
