@@ -100,7 +100,7 @@ class SubsetSC(SPEECHCOMMANDS):
 
     def __getitem__(self, idx): # pyright: ignore
         waveform, _, label, _, _ = super().__getitem__(idx)
-        waveform = fix_audio_length(waveform, t=self.duration, sr=self.sr)
+        waveform = self.fix_audio_length(waveform, t=self.duration, sr=self.sr)
         waveform = (waveform - waveform.mean()) / (waveform.std() + 1e-10)
         feat = self.feature(waveform)
         target = self.label_to_target(label)

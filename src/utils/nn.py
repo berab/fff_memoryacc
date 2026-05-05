@@ -2,18 +2,20 @@ import torch
 from tqdm import tqdm
 
 # TODO: Loss for maximizing sample entropy or minimizing class entropy
-def train_epoch(model, optim, loader, criterion, epoch, device, reg_alpha: float = 0.0):
+def train_epoch(model, optim, loader, criterion, epoch, device, reg_alpha: float = 0.0, 
+                entropy_alpha: float = 0.0):
     model.train()
-    correct, running_loss, running_reg_loss = 0, 0.0, 0.0
+    correct, running_loss, running_reg_loss, running_entropy_loss = 0, 0.0, 0.0, 0.0
     for i, (inputs, targets) in tqdm(enumerate(loader), total=len(loader)):
         inputs, targets = inputs.to(device), targets.to(device)
-        outputs, mixtures = model(inputs)
+        outputs, mixtures, entropies = model(inputs)
 
-        reg_loss = 1 / mixtures.std(dim=1).mean()
+        reg_loss = (1 / mixtures.std(dim=1)).mean()
+        entropy_loss = entropies.mean()
 
         # back propagation
         _, preds = torch.max(outputs.data, 1)
-        loss = criterion(outputs, targets) + reg_alpha * reg_loss
+        loss = criterion(outputs, targets) + reg_alpha * reg_loss + entropy_alpha * entropy_loss
         optim.zero_grad()
         loss.backward()
         optim.step()
@@ -21,9 +23,39 @@ def train_epoch(model, optim, loader, criterion, epoch, device, reg_alpha: float
         # other stats
         running_loss += loss.item()
         running_reg_loss += reg_loss.item()
+        running_entropy_loss += entropy_loss.item()
         correct += (preds == targets).sum().item()
 
-    return running_loss/len(loader), correct/len(loader.dataset), running_reg_loss/len(loader)
+    return (running_loss/len(loader), correct/len(loader.dataset), running_reg_loss/len(loader), 
+            running_entropy_loss/len(loader))
+
+# TODO: Loss for maximizing sample entropy or minimizing class entropy
+def ia_train_epoch(model, optim, loader, criterion, epoch, device, reg_alpha: float = 0.0, 
+                   entropy_alpha: float = 0.0, a_alpha: float = 0.0):
+    model.train()
+    correct, running_loss, running_reg_loss, running_entropy_loss = 0, 0.0, 0.0, 0.0
+    for i, (inputs, targets) in tqdm(enumerate(loader), total=len(loader)):
+        inputs, targets = inputs.to(device), targets.to(device)
+        outputs, mixtures, entropies = model(inputs, a_alpha)
+
+        reg_loss = (1 / mixtures.std(dim=1)).mean()
+        entropy_loss = entropies.mean()
+
+        # back propagation
+        _, preds = torch.max(outputs.data, 1)
+        loss = criterion(outputs, targets) + reg_alpha * reg_loss + entropy_alpha * entropy_loss
+        optim.zero_grad()
+        loss.backward()
+        optim.step()
+
+        # other stats
+        running_loss += loss.item()
+        running_reg_loss += reg_loss.item()
+        running_entropy_loss += entropy_loss.item()
+        correct += (preds == targets).sum().item()
+
+    return (running_loss/len(loader), correct/len(loader.dataset), running_reg_loss/len(loader), 
+            running_entropy_loss/len(loader))
 
 @torch.no_grad()
 def eval_model(model, loader, criterion, device):

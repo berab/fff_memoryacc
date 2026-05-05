@@ -13,9 +13,10 @@ defaults:
   # - pbs
   # - slurm
 
-seed: 47
+seed: 245
 epochs: 50
 reg_alpha: 0.0 # 0.02
+entropy_alpha: 0.0 # 0.1
 
 device: 
   _target_: torch.device

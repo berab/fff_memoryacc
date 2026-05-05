@@ -4,17 +4,19 @@ import logging
 
 from .base import BaseTrainExp 
 
-from utils.nn import train_epoch, eval_model
+from utils.nn import ia_train_epoch, eval_model
 from utils.fff_stats import get_leaves, get_leaf_stats
 
 
-class Train(BaseTrainExp):
-    def __init__(self):
+class IATrain(BaseTrainExp):
+    def __init__(self, alpha: float = 0.0):
         super().__init__()  # Initialize BaseExp
-        self.exp_name = "Train"
+        self.exp_name = "IATrain"
+        self.a_alpha = alpha
 
     def get_config(self) -> dict:
-        exp_conf = {'exp_name': self.exp_name,}
+        exp_conf = {'exp_name': self.exp_name,
+                    "a_alpha": self.a_alpha}
         return self.model.get_config() | self.loader.get_config() | exp_conf 
 
     def log_exp(self, metrics) -> None:
@@ -28,7 +30,7 @@ class Train(BaseTrainExp):
                    }
         # Training
         for epoch in range(self.epochs):
-            train_loss, train_acc, reg_loss, entropy_loss = train_epoch(self.model, self.optim, self.loader.train, self.criterion, epoch, self.device, self.reg_alpha, self.entropy_alpha)
+            train_loss, train_acc, reg_loss, entropy_loss = ia_train_epoch(self.model, self.optim, self.loader.train, self.criterion, epoch, self.device, self.reg_alpha, self.entropy_alpha, self.a_alpha)
             val_loss, val_acc = eval_model(self.model, self.loader.valid, self.criterion, self.device) #TODO: Change valid
             test_loss, test_acc = eval_model(self.model, self.loader.test, self.criterion, self.device) #TODO: Change valid
 

@@ -2,6 +2,13 @@ import torch
 import math
 from torch import nn
 
+def compute_entropy_safe(p: torch.Tensor, minus_p: torch.Tensor) -> torch.Tensor:
+	EPSILON = 1e-6
+	p = torch.clamp(p, min=EPSILON, max=1-EPSILON)
+	minus_p = torch.clamp(minus_p, min=EPSILON, max=1-EPSILON)
+
+	return -p * torch.log(p+EPSILON) - minus_p * torch.log(minus_p+EPSILON)
+
 class FFF(nn.Module):
     def __init__(self,
                  in_features: int, leaf_width: int, out_features: int, depth: int):
@@ -35,7 +42,8 @@ class FFF(nn.Module):
         if x.shape[-1] != self.in_features:
             raise ValueError(f"input tensor must have shape (..., {self.in_features})")
 
-        current_mixture = torch.ones((batch_size, self.n_leaves), dtype=torch.float, device=x.device)
+        current_mixture = torch.ones((batch_size, self.n_leaves), device=x.device)
+        entropies = torch.zeros((batch_size, self.n_leaves - 1), device=x.device)
         for current_depth in range(self.depth):
             platform = torch.tensor(2 ** current_depth - 1, dtype=torch.long, device=x.device)
             next_platform = torch.tensor(2 ** (current_depth+1) - 1, dtype=torch.long, device=x.device)
@@ -49,6 +57,11 @@ class FFF(nn.Module):
             boundary_effect = torch.sigmoid(boundary_plane_logits)                              # (batch_size, (self.n_leaves-1))
 
             not_boundary_effect = 1 - boundary_effect                                   # (batch_size, (self.n_leaves-1))
+
+            platform_entropies = compute_entropy_safe(
+                boundary_effect, not_boundary_effect
+            ) # (batch_size, n_nodes)
+            entropies[:, platform:next_platform] = platform_entropies	# (batch_size, n_nodes)
 
             mixture_modifier = torch.cat( # this cat-fu is to interleavingly combine the two tensors
                                          (not_boundary_effect.unsqueeze(-1), boundary_effect.unsqueeze(-1)),
@@ -76,7 +89,7 @@ class FFF(nn.Module):
         final_logits = new_logits.sum(dim=1)                # (batch_size, self.out_features)
 
         final_logits = final_logits.view(*original_shape[:-1], self.out_features)   # (..., self.out_features)
-        return final_logits, current_mixture
+        return final_logits, current_mixture, entropies
 
     def forward(self, x: torch.Tensor):
         if self.training:
