@@ -16,7 +16,10 @@ class IATrain(BaseTrainExp):
 
     def get_config(self) -> dict:
         exp_conf = {'exp_name': self.exp_name,
-                    "a_alpha": self.a_alpha}
+                    "a_alpha": self.a_alpha, 
+                    "reg_alpha": self.reg_alpha,
+                    "entropy_alpha": self.entropy_alpha,
+                    }
         return self.model.get_config() | self.loader.get_config() | exp_conf 
 
     def log_exp(self, metrics) -> None:
