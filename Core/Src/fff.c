@@ -1,18 +1,21 @@
+#include <string.h>
+#include "mem.h"
 #include "fff.h"
 
-// Weights in TCM
-static float nw[N_NODES * IN_FEATURES] = NW;
-static float nb[N_NODES] = NB;
-static float lw1_1[N_LEAVES_TCM * LEAF_WIDTH * IN_FEATURES] = LW1_1;
-static float lb1_1[N_LEAVES_TCM * LEAF_WIDTH] = LB1_1;
-static float lw2_1[N_LEAVES_TCM * OUT_FEATURES * LEAF_WIDTH] = LW2_1;
-static float lb2_1[N_LEAVES_TCM * OUT_FEATURES] = LB2_1;
+// Routers and some leaves in SRAM
+SRAM float nw[N_NODES * IN_FEATURES] = NW;
+SRAM float nb[N_NODES] = NB;
+SRAM float lw1_r[N_LEAVES_SRAM * LEAF_WIDTH * IN_FEATURES] = LW1_R;
+SRAM float lb1_r[N_LEAVES_SRAM * LEAF_WIDTH] = LB1_R;
+SRAM float lw2_r[N_LEAVES_SRAM * OUT_FEATURES * LEAF_WIDTH] = LW2_R;
+SRAM float lb2_r[N_LEAVES_SRAM * OUT_FEATURES] = LB2_R;
 
-// Weights in SRAM
-AM_SHARED_RW static float lw1_2[N_LEAVES_SRAM * LEAF_WIDTH * IN_FEATURES] = LW1_2;
-AM_SHARED_RW static float lb1_2[N_LEAVES_SRAM * LEAF_WIDTH] = LB1_2;
-AM_SHARED_RW static float lw2_2[N_LEAVES_SRAM * OUT_FEATURES * LEAF_WIDTH] = LW2_2;
-AM_SHARED_RW static float lb2_2[N_LEAVES_SRAM * OUT_FEATURES] = LB2_2;
+// All leaves in FLASH
+const float lw1_f[N_LEAVES * LEAF_WIDTH * IN_FEATURES] = LW1_F;
+const float lb1_f[N_LEAVES * LEAF_WIDTH] = LB1_F;
+const float lw2_f[N_LEAVES * OUT_FEATURES * LEAF_WIDTH] = LW2_F;
+const float lb2_f[N_LEAVES * OUT_FEATURES] = LB2_F;
+
 #ifdef SORTED
 // Sorted leaf indices for memory access optimization based on leaf stats
 static uint8_t li[N_LEAVES] = LI;
@@ -59,32 +62,31 @@ void fff() {
         n = ROUTE(n, neuron(&nw[n * IN_FEATURES], nb[n], input, IN_FEATURES)); //TOOD: Check if MACRO hurts. idk thsi apollo is weird somtimes
     }
     // n -= N_NODES; // Convert node id to leaf id
-    // n = lt[g_sample_index]; // Fetch leaf id from precomputed target indices
-    n = 12;
+    n = lt[g_sample_index]; // Fetch leaf id from precomputed target indices
+    n = li[n]; // Fetch leaf id from memory order
     g_sample_index++;
     // FF
 #ifdef SORTED
-    n = li[n]; // Fetch leaf id from memory order
 #endif
+
+    // load from flash 
+    // memcpy(lw1, lw1_2, 
+    //         4 * sizeof(float));
+    
     float *lw1, *lb1, *lw2, *lb2;
-    if (n >= N_LEAVES_TCM) {
-        lw1 = lw1_2;
-        lb1 = lb1_2;
-        lw2 = lw2_2;
-        lb2 = lb2_2;
-        n -= N_LEAVES_TCM; // Convert leaf id to SRAM index
-#ifdef MEMCHECK
-        g_TCMCount++;
-#endif
+    if (n >= N_LEAVES_SRAM) {
+        lw1 = lw1_r;
+        lb1 = lb1_r;
+        lw2 = lw2_r;
+        lb2 = lb2_r;
+        n -= N_LEAVES_SRAM; // Convert leaf id to SRAM index
     } else {
-        lw1 = lw1_1;
-        lb1 = lb1_1;
-        lw2 = lw2_1;
-        lb2 = lb2_1;
-#ifdef MEMCHECK
-        g_RAMCount++;
-#endif
+        lw1 = lw1_f;
+        lb1 = lb1_f;
+        lw2 = lw2_f;
+        lb2 = lb2_f;
     }
+
     float h;
     for (int i = 0; i < LEAF_WIDTH; i++) {
         h = neuron(&lw1[(n * LEAF_WIDTH + i) * IN_FEATURES], lb1[n * LEAF_WIDTH + i], input, IN_FEATURES);
