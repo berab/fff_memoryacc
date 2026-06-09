@@ -1,0 +1,9 @@
+- loader=mnist
+- mlflow.exp=STM_mnist_iafff_hard_seed
+- exp=ia_train
+- model=iafff
+- reg_alpha=0.0
+- exp.alpha=0.8
+- model.leaf_width=4
+- seed=51
+- entropy_alpha=0.5
