@@ -58,6 +58,8 @@ Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_pwr.c \
 Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_pwr_ex.c \
 Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_cortex.c \
 Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_exti.c \
+Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_uart.c \
+Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_uart_ex.c \
 Core/Src/system_stm32l4xx.c \
 Core/Src/sysmem.c \
 Core/Src/syscalls.c  
@@ -214,12 +216,10 @@ $(BUILD_DIR):
 flash:
 	@echo "Flashing target..."
 	openocd -f interface/stlink.cfg -f target/stm32l4x.cfg \
-		-c "program $(BUILD_DIR)/$(TARGET).hex verify" \
-		-c "reset" -c "shutdown"
+		-c "program $(BUILD_DIR)/$(TARGET).hex reset exit" \
 
 run_openocd:
-	openocd -f interface/stlink.cfg -f target/stm32l4x.cfg -d0 \
-        -c "reset_config srst_only" &
+	openocd -f interface/stlink.cfg -f target/stm32l4x.cfg -d0 &
 
 kill_openocd:
 	killall openocd
@@ -237,7 +237,7 @@ tcount:
 	@echo "Reading timer count from device..."
 	ADDR=$$(arm-none-eabi-nm $(BUILD_DIR)/$(TARGET).elf | grep g_elapsed_ms | awk '{print $$1}'); \
 		 @echo "Reading the timer count at $$ADDR..."; \
-		 openocd -f interface/stlink-v2-1.cfg -f target/stm32l4x.cfg -c "init" -c "reset halt" -c "mdw 0x$$ADDR 1" -c shutdown | cut -d' ' -f3
+		 openocd -f interface/stlink.cfg -f target/stm32l4x.cfg -c "init" -c "reset" -c "mdw 0x$$ADDR 1" -c shutdown | cut -d' ' -f3
 
 
 #######################################
