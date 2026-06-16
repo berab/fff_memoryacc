@@ -18,5 +18,5 @@
 #define RELU(x) ((x) > 0 ? (x) : 0)
 
 int argmax();
-float neuron(const float *weights, float bias, const float *input, int dim);
+int32_t neuron(const int8_t *weights, int32_t bias, const int8_t *input, int dim);
 void fff();

@@ -62,7 +62,12 @@ Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_uart.c \
 Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_uart_ex.c \
 Core/Src/system_stm32l4xx.c \
 Core/Src/sysmem.c \
-Core/Src/syscalls.c  
+Core/Src/syscalls.c \
+Drivers/CMSIS/NN/Source/FullyConnectedFunctions/arm_fully_connected_s8.c \
+Drivers/CMSIS/NN/Source/ActivationFunctions/arm_relu_q7.c \
+Drivers/CMSIS/NN/Source/SoftmaxFunctions/arm_softmax_s8.c \
+Drivers/CMSIS/NN/Source/SoftmaxFunctions/arm_nn_softmax_common_s8.c \
+Drivers/CMSIS/NN/Source/NNSupportFunctions/arm_nn_vec_mat_mult_t_s8.c
 
 C_SOURCES += \
 Core/Src/fff.c \
@@ -121,7 +126,9 @@ AS_DEFS =
 # C defines
 C_DEFS =  \
 -DUSE_HAL_DRIVER \
--DSTM32L475xx
+-DSTM32L475xx \
+-DARM_MATH_DSP \
+-DARM_MATH_CM4
 
 
 # AS includes
@@ -135,7 +142,9 @@ C_INCLUDES =  \
 -IDrivers/STM32L4xx_HAL_Driver/Inc \
 -IDrivers/STM32L4xx_HAL_Driver/Inc/Legacy \
 -IDrivers/CMSIS/Device/ST/STM32L4xx/Include \
--IDrivers/CMSIS/Core/Include
+-IDrivers/CMSIS/Core/Include \
+-IDrivers/CMSIS/NN/Include \
+-IDrivers/CMSIS/DSP/Include
 
 # compile gcc flags
 ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
