@@ -1,4 +1,4 @@
-// #include <string.h>
+#include <stdio.h>
 #include "mem.h"
 #include "fff.h"
 
@@ -46,7 +46,7 @@ int argmax() {
     return max_index;
 }
 
-float neuron(float weights[], float bias, float input[], int dim) {
+float neuron(const float *weights, float bias, const float *input, int dim) {
 		float accumulator = 0.0;
 
 		for (int i = 0; i < dim; i++) {
@@ -61,39 +61,40 @@ void fff() {
     for (int i = 0; i < DEPTH; i++) {
         n = ROUTE(n, neuron(&nw[n * IN_FEATURES], nb[n], input, IN_FEATURES)); //TOOD: Check if MACRO hurts. idk thsi apollo is weird somtimes
     }
-    // n -= N_NODES; // Convert node id to leaf id
     n = lt[g_sample_index]; // Fetch leaf id from precomputed target indices
-    // n = li[n]; // Fetch leaf id from memory order
     g_sample_index++;
-    // FF
 #ifdef SORTED
+    n = li[n]; // Fetch leaf id from memory order
 #endif
 
-    // float *lw1, *lb1, *lw2, *lb2;
-    // if (n >= N_LEAVES_SRAM) {
-    //     lw1 = lw1_1;
-    //     lb1 = lb1_1;
-    //     lw2 = lw2_1;
-    //     lb2 = lb2_1;
-    //     n -= N_LEAVES_SRAM; // Convert leaf id to SRAM index
-    // } else {
-    //     lw1 = lw1_2;
-    //     lb1 = lb1_2;
-    //     lw2 = lw2_2;
-    //     lb2 = lb2_2;
-    // }
-    // lw1 = lw1_2;
-    // lb1 = lb1_2;
-    // lw2 = lw2_2;
-    // lb2 = lb2_2;
+    // FF
+    const float *lw1, *lb1, *lw2, *lb2;
+#ifndef FLASHMEM
+    if (n <= N_LEAVES_SRAM) {
+        lw1 = lw1_1;
+        lb1 = lb1_1;
+        lw2 = lw2_1;
+        lb2 = lb2_1;
+    } else {
+        lw1 = lw1_2;
+        lb1 = lb1_2;
+        lw2 = lw2_2;
+        lb2 = lb2_2;
+    }
+#else
+    lw1 = lw1_2;
+    lb1 = lb1_2;
+    lw2 = lw2_2;
+    lb2 = lb2_2;
+#endif
 
     float h;
     for (int i = 0; i < LEAF_WIDTH; i++) {
-        h = neuron(&lw1_2[(n * LEAF_WIDTH + i) * IN_FEATURES], lb1_2[n * LEAF_WIDTH + i], input, IN_FEATURES);
+        h = neuron(&lw1[(n * LEAF_WIDTH + i) * IN_FEATURES], lb1[n * LEAF_WIDTH + i], input, IN_FEATURES);
         hidden[i] = RELU(h);
     }
     for (int i = 0; i < OUT_FEATURES; i++) {
-        output[i] = neuron(&lw2_2[(n * OUT_FEATURES + i) * LEAF_WIDTH], lb2_2[n * OUT_FEATURES + i], hidden, LEAF_WIDTH);
+        output[i] = neuron(&lw2[(n * OUT_FEATURES + i) * LEAF_WIDTH], lb2[n * OUT_FEATURES + i], hidden, LEAF_WIDTH);
     }
     argmax();
 }

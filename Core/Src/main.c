@@ -1,5 +1,4 @@
 #include "main.h"
-#include "mnist.h"
 #include "fff.h"
 #include <stdio.h>
 #include <string.h>
@@ -79,7 +78,7 @@ int main(void)
     /* Measure time (ms) to run MODEL() 100 times (globals for flash read) */
     uint32_t start_ms = HAL_GetTick();
     for (int i = 0; i < 1000; i++) {
-        // for (int i = 0; i < N_SAMPLES; i++) {
+    // for (int i = 0; i < N_SAMPLES; i++) {
         fff();
     }
     uint32_t end_ms = HAL_GetTick();
@@ -87,11 +86,7 @@ int main(void)
 #ifdef LED
     HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin);
 #endif
-    char msg[64];
-    int n = snprintf(msg, sizeof(msg), "elapsed_ms=%lu\r\n", (unsigned long)elapsed_ms);
-    if (n > 0) {
-        HAL_UART_Transmit(&huart1, (uint8_t *)msg, (uint16_t)n, HAL_MAX_DELAY);
-    }
+    printf("elapsed_ms=%ld\n\r", elapsed_ms);
     /* USER CODE BEGIN 3 */
     /* USER CODE END 3 */
     }

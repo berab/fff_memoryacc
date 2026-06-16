@@ -140,8 +140,17 @@ C_INCLUDES =  \
 # compile gcc flags
 ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
 
+CFLAGS += -D$(TASK)
 ifdef LED
 CFLAGS += -DLED
+endif
+
+ifdef SORTED
+CFLAGS += -DSORTED
+endif
+
+ifdef FLASH
+CFLAGS += -DFLASHMEM
 endif
 
 ifdef LOWPWR

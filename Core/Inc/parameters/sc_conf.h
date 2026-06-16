@@ -1,5 +1,5 @@
-#include "mnist_weights.h"
-#include "mnist_leafstats.h"
+#include "sc_weights.h"
+#include "sc_leafstats.h"
 
 #define DEPTH 4
 #define LEAF_WIDTH 4
