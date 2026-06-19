@@ -28,6 +28,7 @@ CONFIG := bin
 GDB := gdb-multiarch
 GDB_CONFIG := .gdbinit
 GDB_PORT := 61234
+JLINK := $(HOME)/apps/JLink_Linux_V952_x86_64/JLinkExe
 
 SHELL:=/bin/bash
 
@@ -122,15 +123,15 @@ CFLAGS+= -O0
 CFLAGS+= $(DEFINES)
 CFLAGS+= $(INCLUDES)
 
+TASK ?= MNIST
+CFLAGS+= -D$(TASK)
+
 # Optional features
 ifdef SORTED
 CFLAGS+= -DSORTED
 endif
-ifdef TIMING
-CFLAGS+= -DTIMING
-endif
-ifdef LED
-CFLAGS+= -DLED
+ifdef SRAM
+CFLAGS+= -DSRAMMEM
 endif
 ifdef MEMCHECK
 CFLAGS+= -DMEMCHECK
@@ -210,7 +211,7 @@ run_jlink:
 
 flash: all
 	@echo "Flashing target..."
-	JLinkExe -device $(DEVICE) -if SWD -speed 4000 -CommandFile jlink/flash.jlink
+	JLinkExe -device $(DEVICE) -if SWD -speed 4000 -AutoConnect 1 -CommandFile jlink/flash.jlink
 
 run_gdb:
 	$(Q) $(GDB)

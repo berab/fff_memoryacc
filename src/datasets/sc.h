@@ -1,0 +1,5 @@
+#define IN_FEATURES 793
+#define OUT_FEATURES 12
+#define N_SAMPLES 4074
+#define N_VAL_SAMPLES 3703
+#define INPUT {0}

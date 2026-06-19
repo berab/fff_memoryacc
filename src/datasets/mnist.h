@@ -1,6 +1,5 @@
-#include "mnist_sample.h"
-
 #define IN_FEATURES 784
 #define OUT_FEATURES 10
 #define N_SAMPLES 10000
 #define N_VAL_SAMPLES 6000
+#define INPUT {0}
