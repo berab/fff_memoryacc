@@ -77,8 +77,7 @@ int main(void)
 #endif
     /* Measure time (ms) to run MODEL() 100 times (globals for flash read) */
     uint32_t start_ms = HAL_GetTick();
-    for (int i = 0; i < 1000; i++) {
-    // for (int i = 0; i < N_SAMPLES; i++) {
+    for (int i = 0; i < N_SAMPLES; i++) {
         fff();
     }
     uint32_t end_ms = HAL_GetTick();

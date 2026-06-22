@@ -6,4 +6,4 @@
 - exp.alpha=0.8
 - model.leaf_width=4
 - seed=23
-- entropy_alpha=1.0
+- entropy_alpha=2.0
