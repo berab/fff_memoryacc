@@ -76,9 +76,17 @@ else
 
 DEFINES+= -DAM_PACKAGE_BGA
 DEFINES+= -DAM_PART_$(CFAMILY)
+DEFINES+= -DARM_MATH_DSP
+DEFINES+= -DARM_MATH_CM4
+DEFINES += -DAM_HAL_VERSION_MAJ=4
+DEFINES += -DAM_HAL_VERSION_MIN=5
+DEFINES += -DAM_HAL_VERSION_REV=0
 DEFINES+= -Dgcc
 
 INCLUDES = -I$(SDK_PATH)
+INCLUDES+= -IDrivers/CMSIS/Core/Include
+INCLUDES+= -IDrivers/CMSIS/NN/Include
+INCLUDES+= -IDrivers/CMSIS/DSP/Include
 INCLUDES+= -I$(SDK_PATH)/CMSIS/ARM/Include
 INCLUDES+= -I$(SDK_PATH)/CMSIS/AmbiqMicro/Include
 INCLUDES+= -I$(SDK_PATH)/devices
@@ -88,6 +96,7 @@ INCLUDES+= -I$(SDK_PATH)/utils
 INCLUDES+= -I$(SDK_PATH)/boards/$(BOARD)/bsp
 INCLUDES+= -Isrc -Isrc/datasets -Isrc/parameters -Isrc/utils
 INCLUDES+= -Igcc
+
 
 VPATH = $(SDK_PATH)/utils
 VPATH+=:src
@@ -102,6 +111,11 @@ SRC += am_util_stdio.c
 SRC += am_util_string.c
 SRC += startup_gcc.c
 SRC += $(TARGET).c
+SRC += Drivers/CMSIS/NN/Source/FullyConnectedFunctions/arm_fully_connected_s8.c
+SRC += Drivers/CMSIS/NN/Source/ActivationFunctions/arm_relu_q7.c
+SRC += Drivers/CMSIS/NN/Source/SoftmaxFunctions/arm_softmax_s8.c
+SRC += Drivers/CMSIS/NN/Source/SoftmaxFunctions/arm_nn_softmax_common_s8.c
+SRC += Drivers/CMSIS/NN/Source/NNSupportFunctions/arm_nn_vec_mat_mult_t_s8.c
 SRC += fff.c
 
 CSRC = $(filter %.c,$(SRC))
@@ -168,10 +182,12 @@ $(CONFIG):
 $(CONFIG)/%.o: %.c $(CONFIG)/%.d
 	@echo "My config: $(CONFIG)"
 	@echo " Compiling $(COMPILERNAME) $<"
+	@mkdir -p $(dir $@)
 	$(Q) $(CC) -c $(CFLAGS) $< -o $@
 
 $(CONFIG)/%.o: %.s $(CONFIG)/%.d
 	@echo " Assembling $(COMPILERNAME) $<"
+	@mkdir -p $(dir $@)
 	$(Q) $(CC) -c $(CFLAGS) $< -o $@
 
 $(CONFIG)/$(TARGET).axf: $(OBJS) $(LIBS)
