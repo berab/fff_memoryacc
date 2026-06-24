@@ -10,16 +10,21 @@ import argparse
 
 # 1. Configure the experiment details
 BAUD_RATE = 9600
+SERVERS = {
+    "8081": "ws1",
+    "8082": "ws2",
+    "8083": "hpc",
+}
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Download MLflow artifacts and run on device.")
-    parser.add_argument("--port", default="/dev/ttyACM0", help="Serial port (default: /dev/ttyACM0)")
-    parser.add_argument("--dataset", default="mnist", help="Dataset name (default: mnist)")
-    parser.add_argument("--device", default="APL", help="Device name (default: APL)")
+    parser.add_argument("--port", default="0", help="Serial port (default: 0 -> /dev/ttyACM0)")
+    parser.add_argument("--dataset", default="MNIST", help="Dataset name (default: MNIST)")
+    parser.add_argument("--exp-name", default="Default", help="Experiment name (default: Default)")
     parser.add_argument("--target_value", type=float, default=1.0, help="Target parameter value (default: 1.0)")
-    parser.add_argument("--target_param", default="entropy_alpha", help="Target parameter name (default: entropy_alpha)")
-    parser.add_argument("--mlflow_port", default="8083", help="MLflow tracking port (default: 8083)")
-    parser.add_argument("--mode", default=0, type=int, help="Memory mode: SORTED (0), UNSORTED (1), SRAM ONLY (3)")
+    parser.add_argument("--target_param", default="reg_alpha", help="Target parameter name (default: entropy_alpha)")
+    parser.add_argument("--mlflow_port", default="8081", help="MLflow tracking port (default: 8081)")
+    parser.add_argument("--mode", default=0, type=int, help="Memory mode: SORTED (0), UNSORTED (1), RANDOM SORT (2), FLASH ONLY (3)")
     return parser.parse_args()
 
 def tensor_bytes_to_c_array(tensor_bytes: bytes) -> str:
@@ -30,7 +35,7 @@ def tensor_bytes_to_c_array(tensor_bytes: bytes) -> str:
     return f"{{ {body} }}"
 
 
-def build_header(artifacts_dir: str, header_path: str):
+def build_header(artifacts_dir: str, header_path: str, mode: int):
     lt_path = os.path.join(artifacts_dir, "test_leaves.pt")
     li_path = os.path.join(artifacts_dir, "val_opt_indices.pt")
 
@@ -47,6 +52,8 @@ def build_header(artifacts_dir: str, header_path: str):
 
     lt_tensor = torch.load(lt_path, map_location="cpu")
     li_tensor = torch.load(li_path, map_location="cpu")
+    if mode == 2: # Random order
+        li_tensor = torch.arange(len(li_tensor))[torch.randperm(len(li_tensor))]
 
     def to_bytes(t):
         if hasattr(t, "detach"):
@@ -67,14 +74,14 @@ def build_header(artifacts_dir: str, header_path: str):
     print(f"Header written to {header_path}")
     return True
 
-def run_make(mode: int):
+def run_make(mode: int, task: str):
     print("Running make clean all...")
-    if mode == 0:
-        result = subprocess.run(["make", "clean", "all", "SORTED=1"], cwd="..", capture_output=True, text=True)
+    if mode == 0 or mode == 2: # Optimal sorted or random sorted
+        result = subprocess.run(["make", "clean", "all", f"TASK={task}", "SORTED=1"], cwd="..", capture_output=True, text=True)
     elif mode == 1:
         result = subprocess.run(["make", "clean", "all"], cwd="..", capture_output=True, text=True)
     else:
-        result = subprocess.run(["make", "clean", "all", "SRAM=1"], cwd="..", capture_output=True, text=True)
+        result = subprocess.run(["make", "clean", "all", "FLASH=1"], cwd="..", capture_output=True, text=True)
     if result.returncode != 0:
         print("Make failed:")
         print(result.stderr)
@@ -83,7 +90,7 @@ def run_make(mode: int):
     return True
 
 def flash_device():
-    print("Flashing device with JLink...")
+    print("Flashing device with Jlink...")
     result = subprocess.run(["make", "flash"], cwd="..", capture_output=True, text=True)
     if result.returncode != 0:
         print("Flash failed:")
@@ -92,7 +99,7 @@ def flash_device():
     print("Flash successful.")
     return True
 
-def read_serial(port, timeout=15) -> str:
+def read_serial(port, timeout=45) -> str:
     print(f"Reading serial output from {port}...")
     latency: str = "Null"
     try:
@@ -111,25 +118,24 @@ def read_serial(port, timeout=15) -> str:
 
 def main():
     args = parse_args()
-    
-    experiment_name = f"{args.device}_{args.dataset}_iafff_hard_seed"
-    download_dir = f"./downloaded_artifacts/{experiment_name}/{args.device}_{args.dataset}_{args.target_param}_{args.target_value}"
-    header_dir = f"../Core/Inc/parameters/{args.dataset}_leafstats.h"
+    download_dir = f"./downloaded_artifacts/{args.exp_name}/{args.dataset}_{args.target_param}_{args.target_value}"
+    header_dir = f"../Core/Inc/parameters/{args.dataset.lower()}_leafstats.h"
     artifact_subdir = "artifacts"
-    header_filename = f"{args.device}_{args.dataset}_{args.target_param}_{args.target_value}"
+    header_filename = f"{args.exp_name}_{args.dataset}_{args.target_param}_{args.target_value}"
 
     # We still use MlflowClient briefly just to search for the run ID based on your criteria
     mlflow_tracking_uri = f"http://localhost:{args.mlflow_port}"
     client = MlflowClient(tracking_uri=mlflow_tracking_uri)
 
     # Get experiment
-    experiment = client.get_experiment_by_name(experiment_name)
+    print(args.exp_name)
+    experiment = client.get_experiment_by_name(args.exp_name)
     if not experiment:
-        print(f"Experiment '{experiment_name}' not found.")
+        print(f"Experiment '{args.exp_name}' not found.")
         return
 
     # Search for the run matching the metric
-    filter_string = f"params.{args.target_param} = '{args.target_value}'"
+    filter_string = f"params.{args.target_param} = '{args.target_value}' params.task = '{args.dataset}'"
     runs = client.search_runs(
         experiment_ids=[experiment.experiment_id],
         filter_string=filter_string,
@@ -145,6 +151,7 @@ def main():
     os.makedirs("results", exist_ok=True)
 
     # 2. Use mlflow.artifacts.download_artifacts to download the files
+    server = SERVERS[args.mlflow_port]
     for run in runs:
         seed = run.data.params["seed"]
         run_id = run.info.run_id
@@ -156,7 +163,7 @@ def main():
         command = [
             "scp", 
             "-r", 
-            f"hpc:{artifact_uri}",
+            f"{server}:{artifact_uri}",
             download_dir,
         ]
         result = subprocess.run(command, capture_output=True, text=True)
@@ -164,7 +171,7 @@ def main():
         if result.returncode == 0:
             print(f"Success! Artifacts successfully downloaded to {download_dir}")
             header_path = os.path.join(download_dir, f"{header_filename}_seed{seed}.h")
-            build_header(os.path.join(download_dir, artifact_subdir), header_path)
+            build_header(os.path.join(download_dir, artifact_subdir), header_path, args.mode)
 
             print(f"Copying header to {header_dir}...")
             command = [
@@ -174,10 +181,11 @@ def main():
             ]
             subprocess.run(command, capture_output=True, text=True)
 
-            if run_make(args.mode):
+            latency = "null"
+            if run_make(args.mode, args.dataset):
                 if flash_device():
-                    latency = read_serial(args.port)
-            output_file = f"results/time_{args.device}_{args.dataset}.csv"
+                    latency = read_serial(f"/dev/ttyACM{args.port}")
+            output_file = f"results/time_{args.exp_name}_{args.dataset}.csv"
             with open(output_file, "a") as f:
                 f.write(f"{latency},{seed},{args.target_value},{args.mode}\n")
         else:

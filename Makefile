@@ -105,8 +105,8 @@ VPATH+=:src/datasets
 VPATH+=:gcc
 
 SRC = am_resources.c
-SRC += am_util_delay.c
-SRC += am_util_id.c
+# SRC += am_util_delay.c
+# SRC += am_util_id.c
 SRC += am_util_stdio.c
 SRC += am_util_string.c
 SRC += startup_gcc.c
