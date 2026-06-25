@@ -29,7 +29,7 @@ class SignActivation(torch.autograd.Function):
     def backward(ctx, grad_output):
         x, = ctx.saved_tensors
         # return grad_output 
-        return grad_output / x.abs()
+        return grad_output / (x.abs() + 1e-6)
 
     # @staticmethod
     # def backward(ctx, grad_output):
