@@ -42,7 +42,8 @@ class MoE(nn.Module):
             [expert(x) for expert in self.experts], dim=1
         )
         out = (route.unsqueeze(-1) * expert_outputs).sum(dim=1)
-        return out, route
+        entropies = compute_entropy_safe(route, 1-route)
+        return out, route, entropies
 
     def eval_forward(self, x: torch.Tensor, return_experts: bool = False) -> torch.Tensor:
         x = x.view(len(x), -1)
