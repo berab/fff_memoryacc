@@ -15,6 +15,7 @@ class TrainMoE(BaseTrainExp):
 
     def get_config(self) -> dict:
         exp_conf = {'exp_name': self.exp_name,
+                    "reg_alpha": self.reg_alpha
                     }
         return self.model.get_config() | self.loader.get_config() | exp_conf 
 
@@ -29,7 +30,7 @@ class TrainMoE(BaseTrainExp):
                    }
         # Training
         for epoch in range(self.epochs):
-            train_loss, train_acc = moe_train_epoch(self.model, self.optim, self.loader.train, self.criterion, epoch, self.device)
+            train_loss, train_acc, reg_loss = moe_train_epoch(self.model, self.optim, self.loader.train, self.criterion, epoch, self.device, self.reg_alpha)
             val_loss, val_acc = eval_model(self.model, self.loader.valid, self.criterion, self.device) #TODO: Change valid
             test_loss, test_acc = eval_model(self.model, self.loader.test, self.criterion, self.device) #TODO: Change valid
 
@@ -45,7 +46,7 @@ class TrainMoE(BaseTrainExp):
             val_experts = get_experts(self.model, self.loader.valid, self.device)
             val_expert_stats = torch.tensor(get_expert_stats(val_experts, self.model.n_experts))
             expert_dev = torch.std(val_expert_stats)
-            logging.info(f"expert dev: {expert_dev}")
+            logging.info(f"reg loss: {reg_loss}, expert dev: {expert_dev}")
             logging.info(f"Val expert stats: {val_expert_stats}")
 
 
