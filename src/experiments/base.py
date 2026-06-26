@@ -52,7 +52,6 @@ class BaseExp(ABC):
         # Log metrics
         df = pd.DataFrame.from_dict(metrics)
         df.to_csv(self.out_dir/'metrics.csv')
-        self.log_model()
 
     def log_epoch(self, epoch, metrics):
         for key, vals in metrics.items():
@@ -121,6 +120,19 @@ class BaseTrainExp(BaseExp):
         torch.save(self.model.state_dict(), self.out_dir/"state_dict.pt") # TODO: Add more checkpoints
         torch.save(self.model, self.model_dir/f"mnist_d{d}_l{l}_model.pt") # TODO: Add more checkpoints
         torch.save(self.model.state_dict(), self.model_dir/f"mnist_d{d}_l{l}.pt") # TODO: Add more checkpoints
+        mlflow.log_artifact(str(self.out_dir/'model.pt'))
+        mlflow.log_artifact(str(self.out_dir/'state_dict.pt'))
+        mlflow.log_artifact(str(self.out_dir/'state_dict.pt'))
+
+    def log_moe(self) -> None:
+        # Log model
+        e, w = self.model.n_experts, self.model.expert_width
+        self.model.to('cpu')
+        # TODO: Rename model with mlflow id then easy to follow maybe?
+        torch.save(self.model, self.out_dir/"model.pt") # TODO: Add more checkpoints
+        torch.save(self.model.state_dict(), self.out_dir/"state_dict.pt") # TODO: Add more checkpoints
+        torch.save(self.model, self.model_dir/f"mnist_e{e}_w{w}_model.pt") # TODO: Add more checkpoints
+        torch.save(self.model.state_dict(), self.model_dir/f"mnist_e{e}_w{w}.pt") # TODO: Add more checkpoints
         mlflow.log_artifact(str(self.out_dir/'model.pt'))
         mlflow.log_artifact(str(self.out_dir/'state_dict.pt'))
         mlflow.log_artifact(str(self.out_dir/'state_dict.pt'))

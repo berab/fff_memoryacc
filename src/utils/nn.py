@@ -57,6 +57,27 @@ def ia_train_epoch(model, optim, loader, criterion, epoch, device, reg_alpha: fl
     return (running_loss/len(loader), correct/len(loader.dataset), running_reg_loss/len(loader), 
             running_entropy_loss/len(loader))
 
+# TODO: Loss for maximizing sample entropy or minimizing class entropy
+def moe_train_epoch(model, optim, loader, criterion, epoch, device):
+    model.train()
+    correct, running_loss = 0, 0.0
+    for i, (inputs, targets) in tqdm(enumerate(loader), total=len(loader)):
+        inputs, targets = inputs.to(device), targets.to(device)
+        outputs = model(inputs)
+
+        # back propagation
+        _, preds = torch.max(outputs.data, 1)
+        loss = criterion(outputs, targets)
+        optim.zero_grad()
+        loss.backward()
+        optim.step()
+
+        # other stats
+        running_loss += loss.item()
+        correct += (preds == targets).sum().item()
+
+    return (running_loss/len(loader), correct/len(loader.dataset))
+
 @torch.no_grad()
 def eval_model(model, loader, criterion, device):
     model.eval()
@@ -100,7 +121,7 @@ def eval_model_ff(model, loader, criterion, device):
     for inputs, targets in loader:
         inputs, targets = inputs.to(device), targets.to(device)
         outputs = model(inputs)
-        
+
         # stats
         _, preds = torch.max(outputs.data, 1)
         running_loss += criterion(outputs, targets).item()
