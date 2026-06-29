@@ -1,5 +1,4 @@
 #include <stdint.h>
-// #include <am_hal_global.h> // Includes sram section
 
 #ifdef MNIST
 #include "mnist.h"

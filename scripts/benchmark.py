@@ -18,13 +18,13 @@ SERVERS = {
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Download MLflow artifacts and run on device.")
-    parser.add_argument("--port", default="/dev/ttyACM0", help="Serial port (default: /dev/ttyACM0)")
+    parser.add_argument("--port", default="0", help="Serial port (default: 0 -> /dev/ttyACM0)")
     parser.add_argument("--dataset", default="MNIST", help="Dataset name (default: MNIST)")
     parser.add_argument("--exp-name", default="Default", help="Experiment name (default: Default)")
     parser.add_argument("--target_value", type=float, default=1.0, help="Target parameter value (default: 1.0)")
     parser.add_argument("--target_param", default="reg_alpha", help="Target parameter name (default: entropy_alpha)")
     parser.add_argument("--mlflow_port", default="8081", help="MLflow tracking port (default: 8081)")
-    parser.add_argument("--mode", default=0, type=int, help="Memory mode: SORTED (0), UNSORTED (1), RANDOM SORT (3), FLASH ONLY (4)")
+    parser.add_argument("--mode", default=0, type=int, help="Memory mode: SORTED (0), UNSORTED (1), RANDOM SORT (2), FLASH ONLY (3)")
     return parser.parse_args()
 
 def tensor_bytes_to_c_array(tensor_bytes: bytes) -> str:
@@ -52,7 +52,7 @@ def build_header(artifacts_dir: str, header_path: str, mode: int):
 
     lt_tensor = torch.load(lt_path, map_location="cpu")
     li_tensor = torch.load(li_path, map_location="cpu")
-    if mode == 3: # Random order
+    if mode == 2: # Random order
         li_tensor = torch.arange(len(li_tensor))[torch.randperm(len(li_tensor))]
 
     def to_bytes(t):
@@ -76,12 +76,12 @@ def build_header(artifacts_dir: str, header_path: str, mode: int):
 
 def run_make(mode: int, task: str):
     print("Running make clean all...")
-    if mode == 0:
+    if mode == 0 or mode == 2:
         result = subprocess.run(["make", "clean", "all", f"TASK={task}", "SORTED=1"], cwd="..", capture_output=True, text=True)
     elif mode == 1:
-        result = subprocess.run(["make", "clean", "all"], cwd="..", capture_output=True, text=True)
+        result = subprocess.run(["make", "clean", "all", f"TASK={task}"], cwd="..", capture_output=True, text=True)
     else:
-        result = subprocess.run(["make", "clean", "all", "FLASH=1"], cwd="..", capture_output=True, text=True)
+        result = subprocess.run(["make", "clean", "all", f"TASK={task}", "FLASH=1"], cwd="..", capture_output=True, text=True)
     if result.returncode != 0:
         print("Make failed:")
         print(result.stderr)
@@ -99,7 +99,7 @@ def flash_device():
     print("Flash successful.")
     return True
 
-def read_serial(port, timeout=60) -> str:
+def read_serial(port, timeout=45) -> str:
     print(f"Reading serial output from {port}...")
     latency: str = "Null"
     try:
@@ -184,7 +184,7 @@ def main():
             latency = "null"
             if run_make(args.mode, args.dataset):
                 if flash_device():
-                    latency = read_serial(args.port)
+                    latency = read_serial(f"/dev/ttyACM{args.port}")
             output_file = f"results/time_{args.exp_name}_{args.dataset}.csv"
             with open(output_file, "a") as f:
                 f.write(f"{latency},{seed},{args.target_value},{args.mode}\n")

@@ -20,10 +20,6 @@ const float lb2_2[N_LEAVES * OUT_FEATURES] = LB2_2;
 // Sorted leaf indices for memory access optimization based on leaf stats
 const uint8_t li[N_LEAVES] = LI;
 #endif
-#ifdef MEMCHECK
-volatile uint32_t g_TCMCount = 0;
-volatile uint32_t g_RAMCount = 0;
-#endif
 
 // To simulate the all test set samples, we use precomputed leaf target indices
 const uint8_t lt[N_SAMPLES] = LT;
