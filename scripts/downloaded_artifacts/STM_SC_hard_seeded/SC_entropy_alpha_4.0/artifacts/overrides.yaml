@@ -1,0 +1,9 @@
+- seed=82
+- loader=sc
+- mlflow.exp=STM_SC_hard_seeded
+- exp=ia_train
+- model=iafff
+- entropy_alpha=4.0
+- exp.alpha=0.8
+- model.leaf_width=4
+- device=cuda

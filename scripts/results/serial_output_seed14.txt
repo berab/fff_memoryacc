@@ -1,2 +1,0 @@
-lapsed_ms=1273
-elapsed_ms=1273

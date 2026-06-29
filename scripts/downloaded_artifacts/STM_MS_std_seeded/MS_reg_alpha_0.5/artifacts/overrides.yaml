@@ -1,0 +1,10 @@
+- seed=99
+- loader=ms
+- mlflow.exp=APL_MS_std_seeded
+- exp=ia_train
+- model=iafff
+- reg_alpha=1.0
+- exp.alpha=0.8
+- model.leaf_width=16
+- entropy_alpha=0.0
+- device=cuda

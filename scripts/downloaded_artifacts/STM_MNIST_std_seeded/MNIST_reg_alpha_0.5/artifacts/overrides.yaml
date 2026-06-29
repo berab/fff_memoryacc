@@ -1,0 +1,10 @@
+- seed=82
+- loader=mnist
+- mlflow.exp=STM_MNIST_std_seeded
+- exp=ia_train
+- model=iafff
+- reg_alpha=1.0
+- exp.alpha=0.8
+- model.leaf_width=8
+- entropy_alpha=0.0
+- device=cuda

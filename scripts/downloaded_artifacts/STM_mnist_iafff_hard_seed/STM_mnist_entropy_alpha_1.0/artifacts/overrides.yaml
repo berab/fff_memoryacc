@@ -5,5 +5,5 @@
 - reg_alpha=0.0
 - exp.alpha=0.8
 - model.leaf_width=4
-- seed=51
+- seed=23
 - entropy_alpha=1.0
