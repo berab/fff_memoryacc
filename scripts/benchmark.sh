@@ -1,0 +1,12 @@
+python benchmark.py --dataset mnist --mode 0 --target_value 1.0
+python benchmark.py --dataset mnist --mode 0 --target_value 2.0
+python benchmark.py --dataset mnist --mode 1 --target_value 1.0
+python benchmark.py --dataset mnist --mode 1 --target_value 2.0
+python benchmark.py --dataset sc --mode 0 --target_value 1.0
+python benchmark.py --dataset sc --mode 0 --target_value 2.0
+python benchmark.py --dataset sc --mode 1 --target_value 1.0
+python benchmark.py --dataset sc --mode 1 --target_value 2.0
+python benchmark.py --dataset ms --mode 0 --target_value 1.0
+python benchmark.py --dataset ms --mode 0 --target_value 2.0
+python benchmark.py --dataset ms --mode 1 --target_value 1.0
+python benchmark.py --dataset ms --mode 1 --target_value 2.0
