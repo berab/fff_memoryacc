@@ -79,11 +79,13 @@ def run_make(mode: int, task: str, high_perf: bool):
     print("Running make clean all...")
     perf = "HIGH_PERF=1" if high_perf else "" 
     if mode == 0 or mode == 2: # Optimal sorted or random sorted
-        result = subprocess.run(["make", "clean", f"all", f"TASK={task}", perf, "SORTED=1"], cwd="..", capture_output=True, text=True)
+        command = ["make", "clean", f"all", f"TASK={task}", perf, "SORTED=1"]
     elif mode == 1:
-        result = subprocess.run(["make", "clean", f"all{perf}", perf, f"TASK={task}"], cwd="..", capture_output=True, text=True)
+        command = ["make", "clean", f"all", perf, f"TASK={task}"]
     else:
-        result = subprocess.run(["make", "clean", f"all{perf}", perf, f"TASK={task}", "SRAM=1"], cwd="..", capture_output=True, text=True)
+        command = ["make", "clean", f"all", perf, f"TASK={task}", "SRAM=1"]
+    breakpoint()
+    result = subprocess.run(command, cwd="..", capture_output=True, text=True)
     if result.returncode != 0:
         print("Make failed:")
         print(result.stderr)
