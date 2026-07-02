@@ -174,3 +174,61 @@ def eval_model_rf(model, loader, criterion, device):
 
     return running_loss/len(loader), correct/len(loader.dataset), 
 
+# TODO: Loss for maximizing sample entropy or minimizing class entropy
+def train_epoch_ee(model, optim, loader, criterion, epoch, device):
+    model.train()
+    correct, running_loss, total_early = 0, 0.0, 0
+    for i, (inputs, targets) in tqdm(enumerate(loader), total=len(loader)):
+        inputs, targets = inputs.to(device), targets.to(device)
+        outputs, early = model(inputs)
+
+        _, preds = torch.max(outputs.data, 1)
+        loss = criterion(outputs, targets)
+        optim.zero_grad()
+        loss.backward()
+        optim.step()
+
+        # other stats
+        total_early += early
+        running_loss += loss.item()
+        correct += (preds == targets).sum().item()
+
+    return running_loss/len(loader), correct/len(loader.dataset), total_early/len(loader.dataset)
+
+@torch.no_grad()
+def eval_model_ee(model, loader, criterion, device):
+    model.eval()
+    correct, running_loss, total_early = 0, 0.0, 0
+    for inputs, targets in loader:
+        inputs, targets = inputs.to(device), targets.to(device)
+        outputs, early = model(inputs)
+
+        # stats
+        _, preds = torch.max(outputs.data, 1)
+        running_loss += criterion(outputs, targets).item()
+        correct += (preds == targets).sum().item()
+        total_early += early
+
+    return running_loss/len(loader), correct/len(loader.dataset), total_early/len(loader.dataset)
+
+
+# TODO: Loss for maximizing sample entropy or minimizing class entropy
+def train_epoch_ee_v2(model, optim, loader, criterion, epoch, device):
+    model.train()
+    correct, running_loss, total_early = 0, 0.0, 0
+    for i, (inputs, targets) in tqdm(enumerate(loader), total=len(loader)):
+        inputs, targets = inputs.to(device), targets.to(device)
+        outputs, early = model.forward_v2(inputs)
+
+        _, preds = torch.max(outputs.data, 1)
+        loss = criterion(outputs, targets)
+        optim.zero_grad()
+        loss.backward()
+        optim.step()
+
+        # other stats
+        total_early += early.item()
+        running_loss += loss.item()
+        correct += (preds == targets).sum().item()
+
+    return running_loss/len(loader), correct/len(loader.dataset), total_early/len(loader.dataset)

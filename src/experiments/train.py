@@ -1,11 +1,14 @@
 import mlflow
 import torch
 import logging
-
 from .base import BaseTrainExp 
 
 from utils.nn import train_epoch, eval_model
 from utils.fff_stats import get_leaves, get_leaf_stats
+
+
+from flwr_datasets import FederatedDataset
+from flwr_datasets.partitioner import DirichletPartitioner
 
 
 class Train(BaseTrainExp):
@@ -25,6 +28,24 @@ class Train(BaseTrainExp):
         self.log_model()
 
     def run_exp(self) -> dict:
+        # Assuming the class is imported from your framework, e.g., from fedframework import DirichletPartitioner
+        partitioner = DirichletPartitioner(num_partitions=10, partition_by="label",
+                                           alpha=0.5, min_partition_size=10,
+                                           self_balancing=True)
+        fds = FederatedDataset(dataset="mnist", partitioners={"train": partitioner})
+
+        for i in range(10):
+            partition = fds.load_partition(i)
+            par_count = [(torch.tensor(partition[:]['label']) == j).sum() for j in range(10)]
+            print(f"cur part. count: {par_count}")
+
+        partition_sizes = [
+            len(fds.load_partition(partition_id)) for partition_id in range(10)
+        ]
+        print(sorted(partition_sizes))
+        breakpoint()
+
+
         # Metrics init.
         metrics = {'train_acc': [], 'train_loss': [],
                    'val_acc': [], 'val_loss': [],

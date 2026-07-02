@@ -124,6 +124,15 @@ class BaseTrainExp(BaseExp):
         mlflow.log_artifact(str(self.out_dir/'state_dict.pt'))
         mlflow.log_artifact(str(self.out_dir/'state_dict.pt'))
 
+    def log_ee(self) -> None:
+        # Log model
+        self.model.to('cpu')
+        # TODO: Rename model with mlflow id then easy to follow maybe?
+        torch.save(self.model, self.out_dir/"model.pt") # TODO: Add more checkpoints
+        torch.save(self.model.state_dict(), self.out_dir/"state_dict.pt") # TODO: Add more checkpoints
+        mlflow.log_artifact(str(self.out_dir/'model.pt'))
+        mlflow.log_artifact(str(self.out_dir/'state_dict.pt'))
+
     def log_moe(self) -> None:
         # Log model
         e, w = self.model.n_experts, self.model.expert_width
