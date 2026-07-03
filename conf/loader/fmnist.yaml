@@ -1,0 +1,9 @@
+_target_: loaders.fmnist.FashionMNISTLoader
+
+batch_size: 512
+num_workers: 8
+
+normalize:
+  _target_: torchvision.transforms.Normalize
+  mean: [0.2860, ]
+  std: [0.3530, ]

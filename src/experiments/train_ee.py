@@ -26,13 +26,13 @@ class TrainEE(BaseTrainExp):
                    }
         # Training
         for epoch in range(self.epochs):
-            train_loss, train_acc, train_early_count = train_epoch_ee(self.model, self.optim, self.loader.train, self.criterion, epoch, self.device)
-            val_loss, val_acc, val_early_cont = eval_model_ee(self.model, self.loader.valid, self.criterion, self.device) #TODO: Change valid
-            test_loss, test_acc, test_early_count = eval_model_ee(self.model, self.loader.test, self.criterion, self.device) #TODO: Change valid
+            train_loss, train_acc, train_early = train_epoch_ee(self.model, self.optim, self.loader.train, self.criterion, epoch, self.device)
+            val_loss, val_acc, val_early = eval_model_ee(self.model, self.loader.valid, self.criterion, self.device) #TODO: Change valid
+            test_loss, test_acc, test_early = eval_model_ee(self.model, self.loader.test, self.criterion, self.device) #TODO: Change valid
 
             logging.info("Epoch: {} | train acc: {:.4f}, train loss: {:.8f}, valid acc: {:.4f}, valid loss: {:.8f}, test acc: {:.4f}, test loss: {:.8f}".format(
                 epoch, train_acc, train_loss, val_acc, val_loss, test_acc, test_loss))
-            logging.info("train early: {:.4f}, val early: {:.4f}, test early: {:.4f}".format(train_early_count, val_early_cont, test_early_count))
+            logging.info("train early: {}, val early: {}, test early: {}".format(train_early, val_early, test_early))
             metrics['train_acc'].append(train_acc)
             metrics['train_loss'].append(train_loss)
             metrics['val_acc'].append(val_acc)
@@ -41,7 +41,7 @@ class TrainEE(BaseTrainExp):
             self.model.to(self.device)
 
         # # Testing
-        test_loss, test_acc, test_early_count = eval_model_ee(self.model, self.loader.test, self.criterion, self.device) #TODO: Change valid logging.info("Test acc: {}, Test loss: {}".format(test_acc, test_loss))
+        test_loss, test_acc, test_early = eval_model_ee(self.model, self.loader.test, self.criterion, self.device) #TODO: Change valid logging.info("Test acc: {}, Test loss: {}".format(test_acc, test_loss))
         logging.info("FINAL TEST | acc: {:.4f}, loss: {:.4f}, ".format(test_acc, test_loss))
         self.log_test(test_loss, test_acc)
         return metrics
@@ -54,12 +54,12 @@ class TrainEE(BaseTrainExp):
         # Training
         for epoch in range(self.epochs):
             train_loss, train_acc = train_epoch_ee_v2(self.model, self.optim, self.loader.train, self.criterion, epoch, self.device)
-            val_loss, val_acc, val_early_cont = eval_model_ee(self.model, self.loader.valid, self.criterion, self.device) #TODO: Change valid
-            test_loss, test_acc, test_early_count = eval_model_ee(self.model, self.loader.test, self.criterion, self.device) #TODO: Change valid
+            val_loss, val_acc, val_early = eval_model_ee(self.model, self.loader.valid, self.criterion, self.device) #TODO: Change valid
+            test_loss, test_acc, test_early = eval_model_ee(self.model, self.loader.test, self.criterion, self.device) #TODO: Change valid
 
             logging.info("Epoch: {} | train acc: {:.4f}, train loss: {:.8f}, valid acc: {:.4f}, valid loss: {:.8f}, test acc: {:.4f}, test loss: {:.8f}".format(
                 epoch, train_acc, train_loss, val_acc, val_loss, test_acc, test_loss))
-            logging.info("train early: {:.4f}, val early: {:.4f}, test early: {:.4f}".format(train_early_count, val_early_cont, test_early_count))
+            logging.info("train early: {:.4f}, val early: {:.4f}, test early: {:.4f}".format(train_early, val_early, test_early))
             metrics['train_acc'].append(train_acc)
             metrics['train_loss'].append(train_loss)
             metrics['val_acc'].append(val_acc)
@@ -68,7 +68,7 @@ class TrainEE(BaseTrainExp):
             self.model.to(self.device)
 
         # # Testing
-        test_loss, test_acc, test_early_count = eval_model_ee(self.model, self.loader.test, self.criterion, self.device) #TODO: Change valid logging.info("Test acc: {}, Test loss: {}".format(test_acc, test_loss))
+        test_loss, test_acc, test_early = eval_model_ee(self.model, self.loader.test, self.criterion, self.device) #TODO: Change valid logging.info("Test acc: {}, Test loss: {}".format(test_acc, test_loss))
         logging.info("FINAL TEST | acc: {:.4f}, loss: {:.4f}, ".format(test_acc, test_loss))
         self.log_test(test_loss, test_acc)
         return metrics
