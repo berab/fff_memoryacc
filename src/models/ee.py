@@ -231,7 +231,8 @@ class EarlyExitLarge(nn.Module):
         out[early_exits3] = early_out[early_exits3]
 
         # If not confident, continue through the rest of the deep network
-        early_exits = torch.logical_or(early_exits1, early_exits2, early_exits3)
+        early_exits = torch.logical_or(early_exits1, early_exits2)
+        early_exits = torch.logical_or(early_exits, early_exits3)
         x = self.fc4(x)
         final_out = self.fc5(x)
         out[~early_exits] = final_out[~early_exits] # Removing the ones exited
