@@ -41,6 +41,11 @@ class TrainEE(BaseTrainExp):
             self.model.to(self.device)
 
         # # Testing
+        for i in range(len(val_early)):
+            mlflow.log_metric(f"train_exit{i}", train_early[i].item())
+            mlflow.log_metric(f"val_exit{i}", val_early[i].item())
+            mlflow.log_metric(f"test_exit{i}", test_early[i].item())
+
         test_loss, test_acc, test_early = eval_model_ee(self.model, self.loader.test, self.criterion, self.device) #TODO: Change valid logging.info("Test acc: {}, Test loss: {}".format(test_acc, test_loss))
         logging.info("FINAL TEST | acc: {:.4f}, loss: {:.4f}, ".format(test_acc, test_loss))
         self.log_test(test_loss, test_acc)
