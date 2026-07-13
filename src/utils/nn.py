@@ -1,21 +1,32 @@
 import torch
 from tqdm import tqdm
+from utils.prob import get_exp, get_halfnormal
 
 # TODO: Loss for maximizing sample entropy or minimizing class entropy
 def train_epoch(model, optim, loader, criterion, epoch, device, reg_alpha: float = 0.0, 
-                entropy_alpha: float = 0.0):
+                entropy_alpha: float = 0.0, dist_reg = None, dist_alpha = 0.0, n_mem1 = None):
     model.train()
-    correct, running_loss, running_reg_loss, running_entropy_loss = 0, 0.0, 0.0, 0.0
+    correct, dist_loss, running_loss, running_reg_loss, running_entropy_loss = 0, 0.0, 0.0, 0.0, 0.0
+    n_leaves = model.n_leaves
+    if dist_reg == "exp":
+        prob_dist = get_exp(n_mem1, n_leaves)
+    elif dist_reg == "halfnormal":
+        prob_dist = get_halfnormal(n_mem1, n_leaves)
+
     for i, (inputs, targets) in tqdm(enumerate(loader), total=len(loader)):
         inputs, targets = inputs.to(device), targets.to(device)
         outputs, mixtures, entropies = model(inputs)
 
+        if dist_reg != None:
+            leaf_dist, _ = mixtures.mean(dim=0).sort(descending=True)
+            dist_loss = (leaf_dist - prob_dist).abs().sum()
         reg_loss = (1 / mixtures.std(dim=1)).mean()
         entropy_loss = entropies.mean()
 
+
         # back propagation
         _, preds = torch.max(outputs.data, 1)
-        loss = criterion(outputs, targets) + reg_alpha * reg_loss + entropy_alpha * entropy_loss
+        loss = criterion(outputs, targets) + reg_alpha * reg_loss + entropy_alpha * entropy_loss + dist_loss * dist_alpha
         optim.zero_grad()
         loss.backward()
         optim.step()

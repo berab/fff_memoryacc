@@ -4,18 +4,9 @@ import logging
 from .base import BaseTrainExp 
 
 from utils.nn import train_epoch, eval_model
-from utils.fff_stats import get_leaves, get_leaf_stats, get_parition_count
+from utils.fff_stats import get_leaves, get_leaf_stats
 
-#
-# from flwr_datasets import FederatedDataset
-# from flwr_datasets.partitioner import DirichletPartitioner
-MCU_CONFIG = {
-    "apollo": [384, 1000], # TCM, SRAM
-    "stm": [96, 1000], # SRAM, FLASH
-}
-
-
-class Train(BaseTrainExp):
+class TrainGrid(BaseTrainExp):
     def __init__(self):
         super().__init__()  # Initialize BaseExp
         self.exp_name = "Train"
@@ -32,27 +23,10 @@ class Train(BaseTrainExp):
         self.log_model()
 
     def run_exp(self) -> dict:
-        # Assuming the class is imported from your framework, e.g., from fedframework import DirichletPartitioner
-        # partitioner = DirichletPartitioner(num_partitions=10, partition_by="label",
-        #                                    alpha=0.5, min_partition_size=10,
-        #                                    self_balancing=True)
-        # fds = FederatedDataset(dataset="mnist", partitioners={"train": partitioner})
-        #
-        # for i in range(10):
-        #     partition = fds.load_partition(i)
-        #     par_count = [(torch.tensor(partition[:]['label']) == j).sum() for j in range(10)]
-        #     print(f"cur part. count: {par_count}")
-        #
-        # partition_sizes = [
-        #     len(fds.load_partition(partition_id)) for partition_id in range(10)
-        # ]
-        # print(sorted(partition_sizes))
-        # breakpoint()
-        #
-        mem1, mem2 = MCU_CONFIG[self.target_mcu]
-        router_size, leaf_size = self.model.get_element_memory_kb()
-        n_mem1 = get_parition_count(mem1, mem2, self.model.depth, leaf_size, router_size)
 
+
+    def train_model(self, reg_alpha) -> dict:
+        # Assuming the class is imported from your framework, e.g., from fedframework import DirichletPartitioner
 
         # Metrics init.
         metrics = {'train_acc': [], 'train_loss': [],
@@ -60,11 +34,7 @@ class Train(BaseTrainExp):
                    }
         # Training
         for epoch in range(self.epochs):
-        # for epoch in range(self.epochs):
-            if epoch < 2: # 2 epochs of pretraining without dist reg.
-                train_loss, train_acc, reg_loss, entropy_loss = train_epoch(self.model, self.optim, self.loader.train, self.criterion, epoch, self.device, self.reg_alpha, self.entropy_alpha)
-            else:
-                train_loss, train_acc, reg_loss, entropy_loss = train_epoch(self.model, self.optim, self.loader.train, self.criterion, epoch, self.device, self.reg_alpha, self.entropy_alpha, self.dist_reg, self.dist_alpha, n_mem1)
+            train_loss, train_acc, reg_loss, entropy_loss = train_epoch(self.model, self.optim, self.loader.train, self.criterion, epoch, self.device, reg_alpha, self.entropy_alpha)
             val_loss, val_acc = eval_model(self.model, self.loader.valid, self.criterion, self.device) #TODO: Change valid
             test_loss, test_acc = eval_model(self.model, self.loader.test, self.criterion, self.device) #TODO: Change valid
 
@@ -110,11 +80,8 @@ class Train(BaseTrainExp):
         mlflow.log_artifact(str(self.out_dir/'val_leaves.pt'))
         mlflow.log_artifact(str(self.out_dir/'val_opt_indices.pt'))
 
-        # Testing
-        for i in range(len(val_leaf_stats)):
-            mlflow.log_metric(f"val_leaf_stat{i}", val_leaf_stats[i].item())
-            mlflow.log_metric(f"leaf_stat{i}", test_leaf_stats[i].item())
-        test_loss, test_acc = eval_model(self.model, self.loader.test, self.criterion, self.device) #TODO: Change valid logging.info("Test acc: {}, Test loss: {}".format(test_acc, test_loss))
+        # # Testing
+        test_loss, test_acc= eval_model(self.model, self.loader.test, self.criterion, self.device) #TODO: Change valid logging.info("Test acc: {}, Test loss: {}".format(test_acc, test_loss))
         logging.info("FINAL TEST | acc: {:.4f}, loss: {:.4f}, ".format(test_acc, test_loss))
         self.log_test(test_loss, test_acc)
         return metrics

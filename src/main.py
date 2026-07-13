@@ -47,6 +47,9 @@ class Main:
     seed: int
     reg_alpha: float
     entropy_alpha: float
+    target_mcu: str
+    dist_reg: str
+    dist_alpha: int
 
 @hydra.main(config_path="../conf/", config_name="main", version_base='1.3')
 def main(cfg: DictConfig):

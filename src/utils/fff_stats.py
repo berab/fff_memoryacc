@@ -33,3 +33,14 @@ def get_forest_leaf_stats(leaves, n_leaves) -> list[float]:
         stats = [tree_leaves.count(i)/len(tree_leaves) for i in range(n_leaves)]
         forest_stats.append(stats)
     return forest_stats
+
+def get_parition_count(mem1: int, mem2: int, depth: int, leaf_size: int, router_size: int):
+    import math
+    n_leaves =  2 ** depth
+    n_routers = n_leaves - 1
+    mem1_remain = mem1 - n_routers * router_size
+    mem1_leaves = math.floor(mem1_remain / leaf_size)
+    return mem1_leaves
+
+
+

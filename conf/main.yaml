@@ -17,11 +17,15 @@ seed: 245
 epochs: 50
 reg_alpha: 0.0 # 0.02
 entropy_alpha: 0.0 # 0.1
+dist_reg: null
+dist_alpha: 1.0
 
 device: 
   _target_: torch.device
   type: cpu 
   index: 0
+
+target_mcu: apollo
 
 ## Output dir
 hydra:
