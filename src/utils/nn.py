@@ -10,10 +10,10 @@ def train_epoch(model, optim, loader, criterion, epoch, device, reg_alpha: float
     n_leaves = model.n_leaves
     if dist_reg == "exp":
         prob_dist = get_exp(n_mem1, n_leaves)
-        prod_dist = prod_dist.to(device)
+        prob_dist = prob_dist.to(device)
     elif dist_reg == "halfnormal":
         prob_dist = get_halfnormal(n_mem1, n_leaves)
-        prod_dist = prod_dist.to(device)
+        prob_dist = prob_dist.to(device)
 
     for i, (inputs, targets) in tqdm(enumerate(loader), total=len(loader)):
         inputs, targets = inputs.to(device), targets.to(device)
