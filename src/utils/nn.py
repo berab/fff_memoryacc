@@ -6,7 +6,7 @@ from utils.prob import get_exp, get_halfnormal
 def train_epoch(model, optim, loader, criterion, epoch, device, reg_alpha: float = 0.0, 
                 entropy_alpha: float = 0.0, dist_reg = None, dist_alpha = 0.0, n_mem1 = 1):
     model.train()
-    correct, dist_loss, running_loss, running_reg_loss, running_entropy_loss = 0, 0.0, 0.0, 0.0, 0.0
+    correct, dist_loss, running_loss, running_reg_loss, running_entropy_loss, running_dist_loss = 0, 0.0, 0.0, 0.0, 0.0, 0.0
     n_leaves = model.n_leaves
     if dist_reg == "exp":
         prob_dist = get_exp(n_mem1, n_leaves)
@@ -14,12 +14,14 @@ def train_epoch(model, optim, loader, criterion, epoch, device, reg_alpha: float
     elif dist_reg == "halfnormal":
         prob_dist = get_halfnormal(n_mem1, n_leaves)
         prob_dist = prob_dist.to(device)
+    else:
+        prob_dist = None
 
-    for i, (inputs, targets) in tqdm(enumerate(loader), total=len(loader)):
+    for _, (inputs, targets) in tqdm(enumerate(loader), total=len(loader)):
         inputs, targets = inputs.to(device), targets.to(device)
         outputs, mixtures, entropies = model(inputs)
 
-        if dist_reg != None:
+        if prob_dist != None:
             leaf_dist, _ = mixtures.mean(dim=0).sort(descending=True)
             dist_loss = (leaf_dist - prob_dist).abs().sum()
         reg_loss = (1 / mixtures.std(dim=1)).mean()
@@ -34,13 +36,13 @@ def train_epoch(model, optim, loader, criterion, epoch, device, reg_alpha: float
         optim.step()
 
         # other stats
-        running_loss += loss.item()
+        running_loss += criterion(outputs, targets).item()
         running_reg_loss += reg_loss.item()
         running_entropy_loss += entropy_loss.item()
         correct += (preds == targets).sum().item()
 
     return (running_loss/len(loader), correct/len(loader.dataset), running_reg_loss/len(loader), 
-            running_entropy_loss/len(loader))
+            running_entropy_loss/len(loader), running_dist_loss/len(loader))
 
 # TODO: Loss for maximizing sample entropy or minimizing class entropy
 def ia_train_epoch(model, optim, loader, criterion, epoch, device, reg_alpha: float = 0.0, 

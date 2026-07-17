@@ -34,7 +34,7 @@ def get_forest_leaf_stats(leaves, n_leaves) -> list[float]:
         forest_stats.append(stats)
     return forest_stats
 
-def get_parition_count(mem1: int, mem2: int, depth: int, leaf_size: int, router_size: int):
+def get_partition_count(mem1: int, mem2: int, depth: int, leaf_size: int, router_size: int):
     import math
     n_leaves =  2 ** depth
     n_routers = n_leaves - 1

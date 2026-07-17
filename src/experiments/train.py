@@ -4,7 +4,7 @@ import logging
 from .base import BaseTrainExp 
 
 from utils.nn import train_epoch, eval_model
-from utils.fff_stats import get_leaves, get_leaf_stats, get_parition_count
+from utils.fff_stats import get_leaves, get_leaf_stats, get_partition_count
 
 #
 # from flwr_datasets import FederatedDataset
@@ -24,6 +24,9 @@ class Train(BaseTrainExp):
         exp_conf = {'exp_name': self.exp_name,
                     "reg_alpha": self.reg_alpha,
                     "entropy_alpha": self.entropy_alpha,
+                    "dist_alpha": self.dist_alpha,
+                    "dist_reg": self.dist_reg,
+                    "dist_warmup": self.dist_warmup,
                     }
         return self.model.get_config() | self.loader.get_config() | exp_conf 
 
@@ -51,20 +54,23 @@ class Train(BaseTrainExp):
         #
         mem1, mem2 = MCU_CONFIG[self.target_mcu]
         router_size, leaf_size = self.model.get_element_memory_kb()
-        n_mem1 = get_parition_count(mem1, mem2, self.model.depth, leaf_size, router_size)
+        n_mem1 = get_partition_count(mem1, mem2, self.model.depth, leaf_size, router_size)
 
 
         # Metrics init.
         metrics = {'train_acc': [], 'train_loss': [],
                    'val_acc': [], 'val_loss': [],
+                   "reg_loss": [], "entropy_loss": [],
+                   "dist_loss": [], "leaf_std": [],
                    }
         # Training
+        val_leaves, all_val_leaf_stats = [], []
         for epoch in range(self.epochs):
         # for epoch in range(self.epochs):
-            if epoch < 2: # 2 epochs of pretraining without dist reg.
-                train_loss, train_acc, reg_loss, entropy_loss = train_epoch(self.model, self.optim, self.loader.train, self.criterion, epoch, self.device, self.reg_alpha, self.entropy_alpha)
+            if epoch < self.dist_warmup: # 2 epochs of pretraining without dist reg.
+                train_loss, train_acc, reg_loss, entropy_loss, dist_loss = train_epoch(self.model, self.optim, self.loader.train, self.criterion, epoch, self.device, self.reg_alpha, self.entropy_alpha)
             else:
-                train_loss, train_acc, reg_loss, entropy_loss = train_epoch(self.model, self.optim, self.loader.train, self.criterion, epoch, self.device, self.reg_alpha, self.entropy_alpha, self.dist_reg, self.dist_alpha, n_mem1)
+                train_loss, train_acc, reg_loss, entropy_loss, dist_loss = train_epoch(self.model, self.optim, self.loader.train, self.criterion, epoch, self.device, self.reg_alpha, self.entropy_alpha, self.dist_reg, self.dist_alpha, n_mem1)
             val_loss, val_acc = eval_model(self.model, self.loader.valid, self.criterion, self.device) #TODO: Change valid
             test_loss, test_acc = eval_model(self.model, self.loader.test, self.criterion, self.device) #TODO: Change valid
 
@@ -72,20 +78,29 @@ class Train(BaseTrainExp):
                 epoch, train_acc, train_loss, val_acc, val_loss, test_acc, test_loss))
             metrics['train_acc'].append(train_acc)
             metrics['train_loss'].append(train_loss)
+            metrics['reg_loss'].append(train_acc)
+            metrics['entropy_loss'].append(train_loss)
+            metrics['dist_loss'].append(train_loss)
             metrics['val_acc'].append(val_acc)
             metrics['val_loss'].append(val_loss)
-            self.log_epoch(epoch, metrics)
-            self.model.to(self.device)
 
             val_leaves = get_leaves(self.model, self.loader.valid, self.device)
             val_leaf_stats = torch.tensor(get_leaf_stats(val_leaves, self.model.n_leaves))
             leaf_dev = torch.std(val_leaf_stats)
+            metrics['leaf_std'].append(leaf_dev)
+
+            self.log_epoch(epoch, metrics)
+            self.model.to(self.device)
+
             logging.info(f"reg loss: {reg_loss}, entropy loss: {entropy_loss}, leaf dev: {leaf_dev}")
             logging.info(f"Val leaf stats: {val_leaf_stats}")
+            all_val_leaf_stats.append(val_leaf_stats)
 
 
-        val_leaves = get_leaves(self.model, self.loader.valid, self.device)
-        val_leaf_stats = torch.tensor(get_leaf_stats(val_leaves, self.model.n_leaves))
+        val_leaf_stats = all_val_leaf_stats[-1]
+        all_val_leaf_stats = torch.cat(all_val_leaf_stats)
+        torch.save(all_val_leaf_stats, self.out_dir/f"all_leaf_stats.pt") # TODO: Add more checkpoints
+        mlflow.log_artifact(str(self.out_dir/'all_leaf_stats.pt'))
 
         val_leaf_sorted_indices = torch.sort(val_leaf_stats, descending=True).indices
         val_new_leaf_indices = torch.empty_like(val_leaf_sorted_indices)

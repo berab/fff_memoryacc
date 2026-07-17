@@ -50,6 +50,7 @@ class Main:
     target_mcu: str
     dist_reg: str
     dist_alpha: int
+    dist_warmup: int
 
 @hydra.main(config_path="../conf/", config_name="main", version_base='1.3')
 def main(cfg: DictConfig):

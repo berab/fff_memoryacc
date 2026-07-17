@@ -102,7 +102,7 @@ class BaseTrainExp(BaseExp):
 
     def run(self, cfg):
         with EmissionsTracker(output_dir=self.out_dir, log_level="error"):
-            self.setup(cfg.mlflow, cfg.model, cfg.loader, cfg.optim, cfg.epochs, cfg.device, cfg.reg_alpha, cfg.entropy_alpha, cfg.target_mcu, cfg.dist_reg, cfg.dist_alpha)
+            self.setup(cfg.mlflow, cfg.model, cfg.loader, cfg.optim, cfg.epochs, cfg.device, cfg.reg_alpha, cfg.entropy_alpha, cfg.target_mcu, cfg.dist_reg, cfg.dist_alpha, cfg.dist_warmup)
             self.start_run(cfg.seed)
             self.log_exp(self.run_exp())
             self.end_run()
@@ -146,7 +146,7 @@ class BaseTrainExp(BaseExp):
         mlflow.log_artifact(str(self.out_dir/'state_dict.pt'))
         mlflow.log_artifact(str(self.out_dir/'state_dict.pt'))
 
-    def setup(self, mfwrapper: MLFlow, partial_model, loader, optim, epochs, device, reg_alpha, entropy_alpha, target_mcu, dist_reg, dist_alpha):
+    def setup(self, mfwrapper: MLFlow, partial_model, loader, optim, epochs, device, reg_alpha, entropy_alpha, target_mcu, dist_reg, dist_alpha, dist_warmup):
         # MLFlow setup
         mfwrapper.start()
         # Model and optim.setup
@@ -162,3 +162,4 @@ class BaseTrainExp(BaseExp):
         self.target_mcu = target_mcu
         self.dist_reg = dist_reg
         self.dist_alpha = dist_alpha
+        self.dist_warmup = dist_warmup

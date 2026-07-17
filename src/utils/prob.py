@@ -4,8 +4,9 @@ from torch.distributions import HalfNormal
 
 def get_exp(n_mem1: int, n: int) -> torch.Tensor:
     # mem1: more efficient memory
+    assert n_mem1 > 0, "Error: no leaf fits in mem1!"
+    assert n_mem1 < n, "Error: all leaves fit in mem1!"
 
-    # 1. Define your inputs (X must be >= 0)
     n_mem2 = n - n_mem1
     sigma = 1/(n**0.5)
 
@@ -24,6 +25,10 @@ def get_exp(n_mem1: int, n: int) -> torch.Tensor:
 
 
 def get_halfnormal(n_mem1: int, n: int) -> torch.Tensor:
+    # mem1: more efficient memory
+    assert n_mem1 > 0, "Error: no leaf fits in mem1!"
+    assert n_mem1 < n, "Error: all leaves fit in mem1!"
+
     n_mem2 = n - n_mem1
     sigma = n**0.5
 
