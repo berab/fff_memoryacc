@@ -78,9 +78,9 @@ class Train(BaseTrainExp):
                 epoch, train_acc, train_loss, val_acc, val_loss, test_acc, test_loss))
             metrics['train_acc'].append(train_acc)
             metrics['train_loss'].append(train_loss)
-            metrics['reg_loss'].append(train_acc)
-            metrics['entropy_loss'].append(train_loss)
-            metrics['dist_loss'].append(train_loss)
+            metrics['reg_loss'].append(reg_loss)
+            metrics['entropy_loss'].append(entropy_loss)
+            metrics['dist_loss'].append(dist_loss)
             metrics['val_acc'].append(val_acc)
             metrics['val_loss'].append(val_loss)
 
