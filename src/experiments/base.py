@@ -17,6 +17,7 @@ class BaseExp(ABC):
         self.overrides_config = self.out_dir/'.hydra/overrides.yaml'
         self.exp_name: str
         self.model_dir = Path("data/pretrained_models")
+        self.model_dir.mkdir(parents=True, exist_ok=True)
 
     def start_run(self, seed: int):
         mlflow.log_param('seed', seed)
@@ -102,7 +103,7 @@ class BaseTrainExp(BaseExp):
 
     def run(self, cfg):
         with EmissionsTracker(output_dir=self.out_dir, log_level="error"):
-            self.setup(cfg.mlflow, cfg.model, cfg.loader, cfg.optim, cfg.epochs, cfg.device, cfg.reg_alpha, cfg.entropy_alpha, cfg.target_mcu, cfg.dist_reg, cfg.dist_alpha, cfg.dist_warmup)
+            self.setup(cfg.mlflow, cfg.model, cfg.loader, cfg.optim, cfg.epochs, cfg.device, cfg.reg_alpha, cfg.entropy_alpha, cfg.target_mcu, cfg.dist_reg, cfg.dist_alpha, cfg.dist_warmup, cfg.mem_alpha, cfg.mem_tune)
             self.start_run(cfg.seed)
             self.log_exp(self.run_exp())
             self.end_run()
@@ -146,7 +147,7 @@ class BaseTrainExp(BaseExp):
         mlflow.log_artifact(str(self.out_dir/'state_dict.pt'))
         mlflow.log_artifact(str(self.out_dir/'state_dict.pt'))
 
-    def setup(self, mfwrapper: MLFlow, partial_model, loader, optim, epochs, device, reg_alpha, entropy_alpha, target_mcu, dist_reg, dist_alpha, dist_warmup):
+    def setup(self, mfwrapper: MLFlow, partial_model, loader, optim, epochs, device, reg_alpha, entropy_alpha, target_mcu, dist_reg, dist_alpha, dist_warmup, mem_alpha, mem_tune):
         # MLFlow setup
         mfwrapper.start()
         # Model and optim.setup
@@ -163,3 +164,5 @@ class BaseTrainExp(BaseExp):
         self.dist_reg = dist_reg
         self.dist_alpha = dist_alpha
         self.dist_warmup = dist_warmup
+        self.mem_alpha = mem_alpha
+        self.mem_tune = mem_tune

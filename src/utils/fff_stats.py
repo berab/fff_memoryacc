@@ -7,8 +7,13 @@ def get_leaves(model, loader, device):
     for inputs, targets in loader:
         inputs, targets = inputs.to(device), targets.to(device)
         leaves += model.eval_forward(inputs, return_leaves=True).tolist()
-
     return leaves 
+
+def get_mem_leaves(leaf_stats: torch.Tensor):
+    sorted_stats, sorted_indices = leaf_stats.sort()
+    mem1_leaves, mem2_leaves = sorted_indices[:n_mem1], sorted_indices[n_mem1:]
+    return mem1_leaves, mem2_leaves
+
 
 def get_leaf_stats(leaves, n_leaves) -> list[float]:
     s = [leaves.count(i) for i in range(n_leaves)]

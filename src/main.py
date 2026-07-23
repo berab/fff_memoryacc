@@ -51,6 +51,8 @@ class Main:
     dist_reg: str
     dist_alpha: int
     dist_warmup: int
+    mem_alpha: float
+    mem_tune: int
 
 @hydra.main(config_path="../conf/", config_name="main", version_base='1.3')
 def main(cfg: DictConfig):

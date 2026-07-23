@@ -3,7 +3,7 @@ import torch
 import logging
 from .base import BaseTrainExp 
 
-from utils.nn import train_epoch, eval_model
+from utils.nn import train_epoch, eval_model, train_epoch_mem
 from utils.fff_stats import get_leaves, get_leaf_stats, get_partition_count
 
 #
@@ -15,10 +15,10 @@ MCU_CONFIG = {
 }
 
 
-class Train(BaseTrainExp):
+class TrainMemTune(BaseTrainExp):
     def __init__(self):
         super().__init__()  # Initialize BaseExp
-        self.exp_name = "Train"
+        self.exp_name = "TrainMemTune"
 
     def get_config(self) -> dict:
         exp_conf = {'exp_name': self.exp_name,
@@ -65,15 +65,13 @@ class Train(BaseTrainExp):
                    "reg_loss": [], "entropy_loss": [],
                    "dist_loss": [], "leaf_std": [],
                    "p_mem1": [], "p_mem2": [], "pmem1/pmem2": [],
+                   "mem_loss": [],
                    }
         # Training
         val_leaves, all_val_leaf_stats = [], []
+        mem1_leaves = None
         for epoch in range(self.epochs):
-        # for epoch in range(self.epochs):
-            if epoch < self.dist_warmup: # 2 epochs of pretraining without dist reg.
-                train_loss, train_acc, reg_loss, entropy_loss, dist_loss, mem_loss = train_epoch(self.model, self.optim, self.loader.train, self.criterion, epoch, self.device, self.reg_alpha, self.entropy_alpha)
-            else:
-                train_loss, train_acc, reg_loss, entropy_loss, dist_loss, mem_loss = train_epoch(self.model, self.optim, self.loader.train, self.criterion, epoch, self.device, self.reg_alpha, self.entropy_alpha, self.dist_reg, self.dist_alpha, n_mem1, self.mem_alpha)
+            train_loss, train_acc, reg_loss, entropy_loss, dist_loss = train_epoch(self.model, self.optim, self.loader.train, self.criterion, epoch, self.device, self.reg_alpha, self.entropy_alpha, self.dist_reg, self.dist_alpha, n_mem1)
             val_loss, val_acc = eval_model(self.model, self.loader.valid, self.criterion, self.device) #TODO: Change valid
             test_loss, test_acc = eval_model(self.model, self.loader.test, self.criterion, self.device) #TODO: Change valid
 
@@ -96,7 +94,7 @@ class Train(BaseTrainExp):
             metrics['p_mem1'].append(sum(mem1_leaves))
             metrics['p_mem2'].append(sum(mem2_leaves))
             metrics['pmem1/pmem2'].append(sum(mem1_leaves)/sum(mem2_leaves))
-            logging.info("Mem loss: {}, pmem1: {}, pmem2: {}, pmem1/pmem2: {}".format(mem_loss, metrics["p_mem1"][-1], metrics["p_mem2"][-1], metrics["pmem1/pmem2"][-1]))
+            logging.info("pmem1: {}, pmem2: {}, pmem1/pmem2: {}".format(metrics["p_mem1"][-1], metrics["p_mem2"][-1], metrics["pmem1/pmem2"][-1]))
 
             self.log_epoch(epoch, metrics)
             self.model.to(self.device)
@@ -105,6 +103,41 @@ class Train(BaseTrainExp):
             logging.info(f"Val leaf stats: {val_leaf_stats}")
             all_val_leaf_stats.append(val_leaf_stats)
 
+        logging.info("Memory finetuning starts...")
+        for epoch in range(self.mem_tune):
+        # for epoch in range(self.epochs):
+            train_loss, train_acc, reg_loss, entropy_loss, dist_loss, mem_loss = train_epoch_mem(self.model, self.optim, self.loader.train, self.criterion, epoch, self.device, self.reg_alpha, self.entropy_alpha, self.dist_reg, self.dist_alpha, n_mem1, self.mem_alpha, mem1_leaves)
+            val_loss, val_acc = eval_model(self.model, self.loader.valid, self.criterion, self.device) #TODO: Change valid
+            test_loss, test_acc = eval_model(self.model, self.loader.test, self.criterion, self.device) #TODO: Change valid
+
+            logging.info("Epoch: {} | train acc: {:.4f}, train loss: {:.8f}, valid acc: {:.4f}, valid loss: {:.8f}, test acc: {:.4f}, test loss: {:.8f}".format(
+                epoch, train_acc, train_loss, val_acc, val_loss, test_acc, test_loss))
+            metrics['train_acc'].append(train_acc)
+            metrics['train_loss'].append(train_loss)
+            metrics['reg_loss'].append(reg_loss)
+            metrics['entropy_loss'].append(entropy_loss)
+            metrics['dist_loss'].append(dist_loss)
+            metrics['val_acc'].append(val_acc)
+            metrics['val_loss'].append(val_loss)
+            metrics['mem_loss'].append(mem_loss)
+
+            val_leaves = get_leaves(self.model, self.loader.valid, self.device)
+            val_leaf_stats = torch.tensor(get_leaf_stats(val_leaves, self.model.n_leaves))
+            _, val_leaf_sorted_indices = val_leaf_stats.sort()
+            mem1_leaves, mem2_leaves = val_leaf_sorted_indices[:n_mem1], val_leaf_sorted_indices[n_mem1:]
+            leaf_dev = torch.std(val_leaf_stats)
+            metrics['leaf_std'].append(leaf_dev)
+            metrics['p_mem1'].append(sum(mem1_leaves))
+            metrics['p_mem2'].append(sum(mem2_leaves))
+            metrics['pmem1/pmem2'].append(sum(mem1_leaves)/sum(mem2_leaves))
+            logging.info("Mem loss: {}, pmem1: {}, pmem2: {}, pmem1/pmem2: {}".format(mem_loss, metrics["p_mem1"][-1], metrics["p_mem2"][-1], metrics["pmem1/pmem2"][-1]))
+
+            self.log_epoch(epoch, metrics)
+            self.model.to(self.device)
+
+            logging.info(f"reg loss: {reg_loss}, entropy loss: {entropy_loss}, leaf dev: {leaf_dev}")
+            logging.info(f"Val leaf stats: {val_leaf_stats}")
+            all_val_leaf_stats.append(val_leaf_stats)
 
 
         val_leaf_stats = all_val_leaf_stats[-1]
