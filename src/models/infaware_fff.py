@@ -190,6 +190,28 @@ class InfAwareFFF(nn.Module):
                 'leaf_width': self.leaf_width,
                 }
 
+    def get_element_memory_kb(self) -> dict:
+        """
+        Calculates the parameter memory usage of a single router node 
+        and a single leaf node in the FFF model, returning the values in kilobytes.
+        """
+        # PyTorch float32 elements use 4 bytes of memory
+        bytes_per_param = 4 
+
+        # --- 1. Single Router Memory ---
+        router_params = self.in_features + 1
+        router_kb = (router_params * bytes_per_param) / 1024
+
+        # --- 2. Single Leaf Memory ---
+        w1_params = self.in_features * self.leaf_width
+        b1_params = self.leaf_width
+        w2_params = self.leaf_width * self.out_features
+        b2_params = self.out_features
+
+        leaf_params = w1_params + b1_params + w2_params + b2_params
+        leaf_kb = (leaf_params * bytes_per_param) / 1024
+        return  round(router_kb, 4), round(leaf_kb, 4)
+
 def compute_entropy_safe(p: torch.Tensor, minus_p: torch.Tensor) -> torch.Tensor:
     EPSILON = 1e-6
     p = torch.clamp(p, min=EPSILON, max=1-EPSILON)

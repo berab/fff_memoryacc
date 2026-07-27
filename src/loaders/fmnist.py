@@ -9,7 +9,7 @@ SETS = ["train", "valid", "test"]
 
 class FashionMNISTLoader:
     def __init__(self, batch_size: int, num_workers: int, normalize):
-        self.name = 'FashionMNIST'
+        self.name = 'FMNIST'
         self.data_dir = Path(DATA_DIR)
         transform = transforms.Compose([transforms.ToTensor(), normalize])
 

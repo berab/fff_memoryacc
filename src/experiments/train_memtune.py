@@ -37,23 +37,6 @@ class TrainMemTune(BaseTrainExp):
         self.log_model()
 
     def run_exp(self) -> dict:
-        # Assuming the class is imported from your framework, e.g., from fedframework import DirichletPartitioner
-        # partitioner = DirichletPartitioner(num_partitions=10, partition_by="label",
-        #                                    alpha=0.5, min_partition_size=10,
-        #                                    self_balancing=True)
-        # fds = FederatedDataset(dataset="mnist", partitioners={"train": partitioner})
-        #
-        # for i in range(10):
-        #     partition = fds.load_partition(i)
-        #     par_count = [(torch.tensor(partition[:]['label']) == j).sum() for j in range(10)]
-        #     print(f"cur part. count: {par_count}")
-        #
-        # partition_sizes = [
-        #     len(fds.load_partition(partition_id)) for partition_id in range(10)
-        # ]
-        # print(sorted(partition_sizes))
-        # breakpoint()
-        #
         mem1, mem2 = MCU_CONFIG[self.target_mcu]
         router_size, leaf_size = self.model.get_element_memory_kb()
         n_mem1 = get_partition_count(mem1, mem2, self.model.depth, leaf_size, router_size)
@@ -69,9 +52,9 @@ class TrainMemTune(BaseTrainExp):
                    }
         # Training
         val_leaves, all_val_leaf_stats = [], []
-        mem1_leaves = None
+        mem1_leaf_stats = None
         for epoch in range(self.epochs):
-            train_loss, train_acc, reg_loss, entropy_loss, dist_loss = train_epoch(self.model, self.optim, self.loader.train, self.criterion, epoch, self.device, self.reg_alpha, self.entropy_alpha, self.dist_reg, self.dist_alpha, n_mem1)
+            train_loss, train_acc, reg_loss, entropy_loss, dist_loss, _ = train_epoch(self.model, self.optim, self.loader.train, self.criterion, epoch, self.device, self.reg_alpha, self.entropy_alpha, self.dist_reg, self.dist_alpha)
             val_loss, val_acc = eval_model(self.model, self.loader.valid, self.criterion, self.device) #TODO: Change valid
             test_loss, test_acc = eval_model(self.model, self.loader.test, self.criterion, self.device) #TODO: Change valid
 
@@ -84,16 +67,18 @@ class TrainMemTune(BaseTrainExp):
             metrics['dist_loss'].append(dist_loss)
             metrics['val_acc'].append(val_acc)
             metrics['val_loss'].append(val_loss)
+            metrics['mem_loss'].append(0.0)
 
             val_leaves = get_leaves(self.model, self.loader.valid, self.device)
             val_leaf_stats = torch.tensor(get_leaf_stats(val_leaves, self.model.n_leaves))
-            _, val_leaf_sorted_indices = val_leaf_stats.sort()
-            mem1_leaves, mem2_leaves = val_leaf_sorted_indices[:n_mem1], val_leaf_sorted_indices[n_mem1:]
+            val_leaf_stats_sorted, val_leaves_sorted = val_leaf_stats.sort(descending=True)
+            mem1_leaf_stats, mem2_leaf_stats = val_leaf_stats_sorted[:n_mem1], val_leaf_stats_sorted[n_mem1:]
+            mem1_leaves, mem2_leaves = val_leaves_sorted[:n_mem1], val_leaves_sorted[n_mem1:]
             leaf_dev = torch.std(val_leaf_stats)
             metrics['leaf_std'].append(leaf_dev)
-            metrics['p_mem1'].append(sum(mem1_leaves))
-            metrics['p_mem2'].append(sum(mem2_leaves))
-            metrics['pmem1/pmem2'].append(sum(mem1_leaves)/sum(mem2_leaves))
+            metrics['p_mem1'].append(sum(mem1_leaf_stats))
+            metrics['p_mem2'].append(sum(mem2_leaf_stats))
+            metrics['pmem1/pmem2'].append(sum(mem1_leaf_stats)/sum(mem2_leaf_stats))
             logging.info("pmem1: {}, pmem2: {}, pmem1/pmem2: {}".format(metrics["p_mem1"][-1], metrics["p_mem2"][-1], metrics["pmem1/pmem2"][-1]))
 
             self.log_epoch(epoch, metrics)
@@ -123,13 +108,14 @@ class TrainMemTune(BaseTrainExp):
 
             val_leaves = get_leaves(self.model, self.loader.valid, self.device)
             val_leaf_stats = torch.tensor(get_leaf_stats(val_leaves, self.model.n_leaves))
-            _, val_leaf_sorted_indices = val_leaf_stats.sort()
-            mem1_leaves, mem2_leaves = val_leaf_sorted_indices[:n_mem1], val_leaf_sorted_indices[n_mem1:]
+            val_leaf_stats_sorted, val_leaves_sorted = val_leaf_stats.sort(descending=True)
+            mem1_leaf_stats, mem2_leaf_stats = val_leaf_stats_sorted[:n_mem1], val_leaf_stats_sorted[n_mem1:]
+            mem1_leaves, mem2_leaves = val_leaves_sorted[:n_mem1], val_leaves_sorted[n_mem1:]
             leaf_dev = torch.std(val_leaf_stats)
             metrics['leaf_std'].append(leaf_dev)
-            metrics['p_mem1'].append(sum(mem1_leaves))
-            metrics['p_mem2'].append(sum(mem2_leaves))
-            metrics['pmem1/pmem2'].append(sum(mem1_leaves)/sum(mem2_leaves))
+            metrics['p_mem1'].append(sum(mem1_leaf_stats))
+            metrics['p_mem2'].append(sum(mem2_leaf_stats))
+            metrics['pmem1/pmem2'].append(sum(mem1_leaf_stats)/sum(mem2_leaf_stats))
             logging.info("Mem loss: {}, pmem1: {}, pmem2: {}, pmem1/pmem2: {}".format(mem_loss, metrics["p_mem1"][-1], metrics["p_mem2"][-1], metrics["pmem1/pmem2"][-1]))
 
             self.log_epoch(epoch, metrics)
@@ -172,6 +158,10 @@ class TrainMemTune(BaseTrainExp):
         for i in range(len(val_leaf_stats)):
             mlflow.log_metric(f"val_leaf_stat{i}", val_leaf_stats[i].item())
             mlflow.log_metric(f"leaf_stat{i}", test_leaf_stats[i].item())
+        for i, l in enumerate(mem1_leaves):
+            mlflow.log_metric(f"mem1_leaf{i}", l)
+        for i, l in enumerate(mem2_leaves):
+            mlflow.log_metric(f"mem2_leaf{i}", l)
         test_loss, test_acc = eval_model(self.model, self.loader.test, self.criterion, self.device) #TODO: Change valid logging.info("Test acc: {}, Test loss: {}".format(test_acc, test_loss))
         logging.info("FINAL TEST | acc: {:.4f}, loss: {:.4f}, ".format(test_acc, test_loss))
         self.log_test(test_loss, test_acc)

@@ -33,7 +33,6 @@ def train_epoch(model, optim, loader, criterion, epoch, device, reg_alpha: float
         reg_loss = (1 / mixtures.std(dim=1)).mean()
         entropy_loss = entropies.mean()
 
-
         # back propagation
         _, preds = torch.max(outputs.data, 1)
         loss = criterion(outputs, targets) + reg_alpha * reg_loss + entropy_alpha * entropy_loss + dist_loss * dist_alpha + mem_alpha * mem_loss
@@ -80,7 +79,10 @@ def train_epoch_mem(model, optim, loader, criterion, epoch, device, reg_alpha: f
             dist_loss = (leaf_dist - prob_dist).abs().sum()
 
         mem1_leaf_dist, mem2_leaf_dist = mixtures.mean(dim=0)[mem1_mask], mixtures.mean(dim=0)[~mem1_mask]
+        mem_loss = mem2_leaf_dist.sum()/mem1_leaf_dist.sum() # Since we want mem1 high, mem2 low (which happens if this loss descends)
 
+        leaf_dist, leaf_indices = mixtures.mean(dim=0).sort(descending=True)
+        mem1_leaf_dist, mem2_leaf_dist = leaf_dist[:n_mem1], leaf_dist[n_mem1:]
         mem_loss = mem2_leaf_dist.sum()/mem1_leaf_dist.sum() # Since we want mem1 high, mem2 low (which happens if this loss descends)
 
         reg_loss = (1 / mixtures.std(dim=1)).mean()
@@ -106,19 +108,25 @@ def train_epoch_mem(model, optim, loader, criterion, epoch, device, reg_alpha: f
 
 # TODO: Loss for maximizing sample entropy or minimizing class entropy
 def ia_train_epoch(model, optim, loader, criterion, epoch, device, reg_alpha: float = 0.0, 
-                   entropy_alpha: float = 0.0, a_alpha: float = 0.0):
+                   entropy_alpha: float = 0.0, a_alpha: float = 0.0, n_mem1 = 1, mem_alpha = 0.0):
     model.train()
     correct, running_loss, running_reg_loss, running_entropy_loss = 0, 0.0, 0.0, 0.0
+    running_mem_loss = 0.0
+    n_leaves = model.n_leaves
     for i, (inputs, targets) in tqdm(enumerate(loader), total=len(loader)):
         inputs, targets = inputs.to(device), targets.to(device)
         outputs, mixtures, entropies = model(inputs, a_alpha)
+
+        leaf_dist, leaf_indices = mixtures.mean(dim=0).sort(descending=True)
+        mem1_leaf_dist, mem2_leaf_dist = leaf_dist[:n_mem1], leaf_dist[n_mem1:]
+        mem_loss = mem2_leaf_dist.sum()/mem1_leaf_dist.sum() # Since we want mem1 high, mem2 low (which happens if this loss descends)
 
         reg_loss = (1 / mixtures.std(dim=1)).mean()
         entropy_loss = entropies.mean()
 
         # back propagation
         _, preds = torch.max(outputs.data, 1)
-        loss = criterion(outputs, targets) + reg_alpha * reg_loss + entropy_alpha * entropy_loss
+        loss = criterion(outputs, targets) + reg_alpha * reg_loss + entropy_alpha * entropy_loss + mem_loss * mem_alpha
         optim.zero_grad()
         loss.backward()
         optim.step()
@@ -127,10 +135,49 @@ def ia_train_epoch(model, optim, loader, criterion, epoch, device, reg_alpha: fl
         running_loss += loss.item()
         running_reg_loss += reg_loss.item()
         running_entropy_loss += entropy_loss.item()
+        running_mem_loss += mem_loss.item()
         correct += (preds == targets).sum().item()
 
     return (running_loss/len(loader), correct/len(loader.dataset), running_reg_loss/len(loader), 
-            running_entropy_loss/len(loader))
+            running_entropy_loss/len(loader), running_mem_loss/len(loader))
+
+# TODO: Loss for maximizing sample entropy or minimizing class entropy
+def ia_train_epoch_mem(model, optim, loader, criterion, epoch, device, reg_alpha: float = 0.0, 
+                       entropy_alpha: float = 0.0, a_alpha: float = 0.0, n_mem1 = 1, 
+                       mem_alpha = 0.0, mem1_leaves = None):
+    model.train()
+    correct, running_loss, running_reg_loss, running_entropy_loss = 0, 0.0, 0.0, 0.0
+    running_mem_loss = 0.0
+    n_leaves = model.n_leaves
+    mem1_mask = torch.zeros(n_leaves, dtype=torch.bool)
+    mem1_mask[mem1_leaves] = True
+
+    for i, (inputs, targets) in tqdm(enumerate(loader), total=len(loader)):
+        inputs, targets = inputs.to(device), targets.to(device)
+        outputs, mixtures, entropies = model(inputs, a_alpha)
+
+        mem1_leaf_dist, mem2_leaf_dist = mixtures.mean(dim=0)[mem1_mask], mixtures.mean(dim=0)[~mem1_mask]
+        mem_loss = mem2_leaf_dist.sum()/mem1_leaf_dist.sum() # Since we want mem1 high, mem2 low (which happens if this loss descends)
+
+        reg_loss = (1 / mixtures.std(dim=1)).mean()
+        entropy_loss = entropies.mean()
+
+        # back propagation
+        _, preds = torch.max(outputs.data, 1)
+        loss = criterion(outputs, targets) + reg_alpha * reg_loss + entropy_alpha * entropy_loss + mem_loss * mem_alpha
+        optim.zero_grad()
+        loss.backward()
+        optim.step()
+
+        # other stats
+        running_loss += loss.item()
+        running_reg_loss += reg_loss.item()
+        running_entropy_loss += entropy_loss.item()
+        running_mem_loss += mem_loss.item()
+        correct += (preds == targets).sum().item()
+
+    return (running_loss/len(loader), correct/len(loader.dataset), running_reg_loss/len(loader), 
+            running_entropy_loss/len(loader), running_mem_loss/len(loader))
 
 # TODO: Loss for maximizing sample entropy or minimizing class entropy
 def moe_train_epoch(model, optim, loader, criterion, epoch, device, reg_alpha: float = 0.0, 

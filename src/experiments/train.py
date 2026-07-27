@@ -65,6 +65,7 @@ class Train(BaseTrainExp):
                    "reg_loss": [], "entropy_loss": [],
                    "dist_loss": [], "leaf_std": [],
                    "p_mem1": [], "p_mem2": [], "pmem1/pmem2": [],
+                   "mem_loss": [],
                    }
         # Training
         val_leaves, all_val_leaf_stats = [], []
@@ -86,16 +87,18 @@ class Train(BaseTrainExp):
             metrics['dist_loss'].append(dist_loss)
             metrics['val_acc'].append(val_acc)
             metrics['val_loss'].append(val_loss)
+            metrics["mem_loss"].append(mem_loss)
 
             val_leaves = get_leaves(self.model, self.loader.valid, self.device)
             val_leaf_stats = torch.tensor(get_leaf_stats(val_leaves, self.model.n_leaves))
-            _, val_leaf_sorted_indices = val_leaf_stats.sort()
-            mem1_leaves, mem2_leaves = val_leaf_sorted_indices[:n_mem1], val_leaf_sorted_indices[n_mem1:]
+            val_leaf_stats_sorted, val_leaves_sorted = val_leaf_stats.sort(descending=True)
+            mem1_leaf_stats, mem2_leaf_stats = val_leaf_stats_sorted[:n_mem1], val_leaf_stats_sorted[n_mem1:]
+            mem1_leaves, mem2_leaves = val_leaves_sorted[:n_mem1], val_leaves_sorted[n_mem1:]
             leaf_dev = torch.std(val_leaf_stats)
             metrics['leaf_std'].append(leaf_dev)
-            metrics['p_mem1'].append(sum(mem1_leaves))
-            metrics['p_mem2'].append(sum(mem2_leaves))
-            metrics['pmem1/pmem2'].append(sum(mem1_leaves)/sum(mem2_leaves))
+            metrics['p_mem1'].append(sum(mem1_leaf_stats))
+            metrics['p_mem2'].append(sum(mem2_leaf_stats))
+            metrics['pmem1/pmem2'].append(sum(mem1_leaf_stats)/sum(mem2_leaf_stats))
             logging.info("Mem loss: {}, pmem1: {}, pmem2: {}, pmem1/pmem2: {}".format(mem_loss, metrics["p_mem1"][-1], metrics["p_mem2"][-1], metrics["pmem1/pmem2"][-1]))
 
             self.log_epoch(epoch, metrics)
@@ -104,8 +107,6 @@ class Train(BaseTrainExp):
             logging.info(f"reg loss: {reg_loss}, entropy loss: {entropy_loss}, leaf dev: {leaf_dev}")
             logging.info(f"Val leaf stats: {val_leaf_stats}")
             all_val_leaf_stats.append(val_leaf_stats)
-
-
 
         val_leaf_stats = all_val_leaf_stats[-1]
         all_val_leaf_stats = torch.cat(all_val_leaf_stats)
@@ -139,6 +140,10 @@ class Train(BaseTrainExp):
         for i in range(len(val_leaf_stats)):
             mlflow.log_metric(f"val_leaf_stat{i}", val_leaf_stats[i].item())
             mlflow.log_metric(f"leaf_stat{i}", test_leaf_stats[i].item())
+        for i, l in enumerate(mem1_leaves):
+            mlflow.log_metric(f"mem1_leaf{i}", l)
+        for i, l in enumerate(mem2_leaves):
+            mlflow.log_metric(f"mem2_leaf{i}", l)
         test_loss, test_acc = eval_model(self.model, self.loader.test, self.criterion, self.device) #TODO: Change valid logging.info("Test acc: {}, Test loss: {}".format(test_acc, test_loss))
         logging.info("FINAL TEST | acc: {:.4f}, loss: {:.4f}, ".format(test_acc, test_loss))
         self.log_test(test_loss, test_acc)
