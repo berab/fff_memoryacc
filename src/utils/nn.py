@@ -108,14 +108,27 @@ def train_epoch_mem(model, optim, loader, criterion, epoch, device, reg_alpha: f
 
 # TODO: Loss for maximizing sample entropy or minimizing class entropy
 def ia_train_epoch(model, optim, loader, criterion, epoch, device, reg_alpha: float = 0.0, 
-                   entropy_alpha: float = 0.0, a_alpha: float = 0.0, n_mem1 = 1, mem_alpha = 0.0):
+                   entropy_alpha: float = 0.0, a_alpha: float = 0.0, dist_reg = None, dist_alpha = 0.0, n_mem1 = 1, mem_alpha = 0.0):
     model.train()
-    correct, running_loss, running_reg_loss, running_entropy_loss = 0, 0.0, 0.0, 0.0
+    correct, dist_loss, running_loss, running_reg_loss, running_entropy_loss, running_dist_loss = 0, 0.0, 0.0, 0.0, 0.0, 0.0
     running_mem_loss = 0.0
     n_leaves = model.n_leaves
+    if dist_reg == "exp":
+        prob_dist = get_exp(n_mem1, n_leaves)
+        prob_dist = prob_dist.to(device)
+    elif dist_reg == "halfnormal":
+        prob_dist = get_halfnormal(n_mem1, n_leaves)
+        prob_dist = prob_dist.to(device)
+    else:
+        prob_dist = None
+
     for i, (inputs, targets) in tqdm(enumerate(loader), total=len(loader)):
         inputs, targets = inputs.to(device), targets.to(device)
         outputs, mixtures, entropies = model(inputs, a_alpha)
+
+        if prob_dist != None:
+            leaf_dist, _ = mixtures.mean(dim=0).sort(descending=True)
+            dist_loss = (leaf_dist - prob_dist).abs().sum()
 
         leaf_dist, leaf_indices = mixtures.mean(dim=0).sort(descending=True)
         mem1_leaf_dist, mem2_leaf_dist = leaf_dist[:n_mem1], leaf_dist[n_mem1:]
@@ -126,7 +139,7 @@ def ia_train_epoch(model, optim, loader, criterion, epoch, device, reg_alpha: fl
 
         # back propagation
         _, preds = torch.max(outputs.data, 1)
-        loss = criterion(outputs, targets) + reg_alpha * reg_loss + entropy_alpha * entropy_loss + mem_loss * mem_alpha
+        loss = criterion(outputs, targets) + reg_alpha * reg_loss + entropy_alpha * entropy_loss + dist_loss * dist_alpha + mem_alpha * mem_loss
         optim.zero_grad()
         loss.backward()
         optim.step()
