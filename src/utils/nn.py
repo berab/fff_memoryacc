@@ -194,13 +194,31 @@ def ia_train_epoch_mem(model, optim, loader, criterion, epoch, device, reg_alpha
 
 # TODO: Loss for maximizing sample entropy or minimizing class entropy
 def moe_train_epoch(model, optim, loader, criterion, epoch, device, reg_alpha: float = 0.0, 
-                    entropy_alpha: float = 0.0):
+                    entropy_alpha: float = 0.0, dist_reg = None, dist_alpha = 0.0, n_mem1 = 1, mem_alpha = 0.0):
     model.train()
-    correct, running_loss = 0, 0.0
-    running_reg_loss, running_entropy_loss = 0.0, 0.0
+    correct, dist_loss, running_loss, running_reg_loss, running_entropy_loss, running_dist_loss = 0, 0.0, 0.0, 0.0, 0.0, 0.0
+    running_mem_loss = 0.0
+    n_experts = model.n_experts
+    if dist_reg == "exp":
+        prob_dist = get_exp(n_mem1, n_experts)
+        prob_dist = prob_dist.to(device)
+    elif dist_reg == "halfnormal":
+        prob_dist = get_halfnormal(n_mem1, n_experts)
+        prob_dist = prob_dist.to(device)
+    else:
+        prob_dist = None
+
     for i, (inputs, targets) in tqdm(enumerate(loader), total=len(loader)):
         inputs, targets = inputs.to(device), targets.to(device)
         outputs, probs, entropies = model(inputs)
+
+        if prob_dist != None:
+            expert_dist, _ = probs.mean(dim=0).sort(descending=True)
+            dist_loss = (expert_dist - prob_dist).abs().sum()
+
+        expert_dist, expert_indices = probs.mean(dim=0).sort(descending=True)
+        mem1_expert_dist, mem2_expert_dist = expert_dist[:n_mem1], expert_dist[n_mem1:]
+        mem_loss = mem2_expert_dist.sum()/mem1_expert_dist.sum() # Since we want mem1 high, mem2 low (which happens if this loss descends)
 
         reg_loss = (1 / probs.std(dim=1)).mean()
         entropy_loss = entropies.mean()
@@ -215,10 +233,12 @@ def moe_train_epoch(model, optim, loader, criterion, epoch, device, reg_alpha: f
         # other stats
         running_loss += loss.item()
         running_reg_loss += reg_loss.item()
+        running_entropy_loss += entropy_loss.item()
+        running_mem_loss += mem_loss.item()
         correct += (preds == targets).sum().item()
 
     return (running_loss/len(loader), correct/len(loader.dataset), running_reg_loss/len(loader), 
-            running_entropy_loss/len(loader))
+            running_entropy_loss/len(loader), running_mem_loss/len(loader))
 
 @torch.no_grad()
 def eval_model(model, loader, criterion, device):

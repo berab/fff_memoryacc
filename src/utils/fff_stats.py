@@ -46,6 +46,3 @@ def get_partition_count(mem1: int, mem2: int, depth: int, leaf_size: int, router
     mem1_remain = mem1 - n_routers * router_size
     mem1_leaves = math.floor(mem1_remain / leaf_size)
     return mem1_leaves
-
-
-

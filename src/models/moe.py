@@ -63,3 +63,25 @@ class MoE(nn.Module):
             'expert_width': self.expert_width,
             'n_experts': self.n_experts,
         }
+
+    def get_element_memory_kb(self) -> dict:
+        """
+        Calculates the parameter memory usage of a single router node 
+        and a single leaf node in the FFF model, returning the values in kilobytes.
+        """
+        # PyTorch float32 elements use 4 bytes of memory
+        bytes_per_param = 4 
+
+        # --- 1. Single Router Memory ---
+        router_params = self.in_features * self.n_experts + self.n_experts
+        router_kb = (router_params * bytes_per_param) / 1024
+
+        # --- 2. Single Expert Memory ---
+        w1_params = self.in_features * self.expert_width
+        b1_params = self.expert_width
+        w2_params = self.expert_width * self.out_features
+        b2_params = self.out_features
+
+        expert_params = w1_params + b1_params + w2_params + b2_params
+        expert_kb = (expert_params * bytes_per_param) / 1024
+        return  round(router_kb, 4), round(expert_kb, 4)

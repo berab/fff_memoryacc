@@ -33,3 +33,10 @@ def get_forest_expert_stats(experts, n_experts) -> list[float]:
         stats = [tree_experts.count(i)/len(tree_experts) for i in range(n_experts)]
         forest_stats.append(stats)
     return forest_stats
+
+def get_partition_count(mem1: int, mem2: int, n_experts: int, expert_size: int, router_size: int):
+    import math
+    n_routers = 1
+    mem1_remain = mem1 - n_routers * router_size
+    mem1_leaves = math.floor(mem1_remain / expert_size)
+    return mem1_leaves
