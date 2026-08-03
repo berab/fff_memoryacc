@@ -1,5 +1,5 @@
 _target_: models.moe.MoE
 _partial_: True # in_channels, num_classes (out_dim), image_size (in_hxw[0] or in_hxw) / before
 
-expert_width: 8
-n_experts: 32
+expert_width: 32
+n_experts: 8

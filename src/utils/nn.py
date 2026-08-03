@@ -225,7 +225,7 @@ def moe_train_epoch(model, optim, loader, criterion, epoch, device, reg_alpha: f
 
         # back propagation
         _, preds = torch.max(outputs.data, 1)
-        loss = criterion(outputs, targets) + reg_alpha * reg_loss + entropy_alpha * entropy_loss
+        loss = criterion(outputs, targets) + reg_alpha * reg_loss + entropy_alpha * entropy_loss + mem_loss * mem_alpha + dist_loss * dist_alpha
         optim.zero_grad()
         loss.backward()
         optim.step()

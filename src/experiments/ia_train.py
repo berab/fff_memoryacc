@@ -26,6 +26,7 @@ class IATrain(BaseTrainExp):
                     "mem_alpha": self.mem_alpha,
                     "mem_tune": self.mem_tune,
                     "a_alpha": self.a_alpha,
+                    "dist_alpha": self.dist_alpha,
                     }
         return self.model.get_config() | self.loader.get_config() | exp_conf 
 

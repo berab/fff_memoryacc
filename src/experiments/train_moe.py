@@ -25,6 +25,7 @@ class TrainMoE(BaseTrainExp):
                     "dist_warmup": self.dist_warmup,
                     "mem_alpha": self.mem_alpha,
                     "mem_tune": self.mem_tune,
+                    "dist_alpha": self.dist_alpha,
                     }
         return self.model.get_config() | self.loader.get_config() | exp_conf 
 
