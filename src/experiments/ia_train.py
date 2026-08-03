@@ -47,7 +47,7 @@ class IATrain(BaseTrainExp):
         # Training
         val_leaves, all_val_leaf_stats = [], []
         for epoch in range(self.epochs):
-            train_loss, train_acc, reg_loss, entropy_loss, mem_loss = ia_train_epoch(self.model, self.optim, self.loader.train, self.criterion, epoch, self.device, self.reg_alpha, self.entropy_alpha, self.a_alpha, n_mem1, self.mem_alpha)
+            train_loss, train_acc, reg_loss, entropy_loss, mem_loss = ia_train_epoch(self.model, self.optim, self.loader.train, self.criterion, epoch, self.device, self.reg_alpha, self.entropy_alpha, self.a_alpha, self.dist_reg, self.dist_alpha, n_mem1, self.mem_alpha)
             val_loss, val_acc = eval_model(self.model, self.loader.valid, self.criterion, self.device) #TODO: Change valid
             test_loss, test_acc = eval_model(self.model, self.loader.test, self.criterion, self.device) #TODO: Change valid
 
