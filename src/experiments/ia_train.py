@@ -45,6 +45,10 @@ class IATrain(BaseTrainExp):
                    "leaf_std": [], "mem_loss": [],
                    "p_mem1": [], "p_mem2": [], "pmem1/pmem2": [],
                    }
+        mlflow.log_param("n_mem1", n_mem1)
+        if n_mem1 == 0:
+            logging.warning(f"n_mem1 is 0, mem1: {mem1}, mem2: {mem2}, router_size: {router_size}, leaf_size: {leaf_size}")
+            return metrics
         # Training
         val_leaves, all_val_leaf_stats = [], []
         for epoch in range(self.epochs):
