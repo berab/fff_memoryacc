@@ -16,7 +16,8 @@ TIME_CSVFILE=time_mnistval.csv
 MEM_CSVFILE=mem_mnistval.csv
 endif
 # All makefiles use this to find the top level directory.
-SDK_PATH := $(HOME)/apps/AmbiqSuite_R4.5.0
+# SDK_PATH := $(HOME)/apps/AmbiqSuite_R4.5.0
+SDK_PATH := ./AmbiqSuite/AmbiqSuite_R4.5.0/AmbiqSuite_R4.5.0
 SWROOT ?= $(SDK_PATH)
 
 # Include rules for building generic examples.
@@ -28,7 +29,8 @@ CONFIG := bin
 GDB := gdb-multiarch
 GDB_CONFIG := .gdbinit
 GDB_PORT := 61234
-JLINK := $(HOME)/apps/JLink_Linux_V952_x86_64/JLinkExe
+# JLINK := $(HOME)/apps/JLink_Linux_V952_x86_64/JLinkExe
+JLINK := JLink_Linux_V960_x86_64/JLinkExe
 
 SHELL:=/bin/bash
 
@@ -119,7 +121,9 @@ LIBS += $(SDK_PATH)/boards/$(BOARD)/bsp/gcc/bin/libam_bsp.a
 CFLAGS = -mthumb -mcpu=$(CPU) -mfpu=$(FPU) -mfloat-abi=$(FABI)
 CFLAGS+= -ffunction-sections -fdata-sections -fomit-frame-pointer
 CFLAGS+= -MMD -MP -std=c99 -Wall -g
-CFLAGS+= -O0
+# CFLAGS+= -Og
+CFLAGS+= -O3
+CFLAGS+= -funroll-loops
 CFLAGS+= $(DEFINES)
 CFLAGS+= $(INCLUDES)
 
@@ -138,9 +142,11 @@ CFLAGS+= -DMEMCHECK
 endif
 
 FREQ=96000000
-ifdef HIGH_PERF
-CFLAGS+= -DHIGH_PERF
-FREQ=192000000
+HIGH_PERF ?= 0
+
+ifeq ($(HIGH_PERF), 1)
+    CFLAGS += -DHIGH_PERF
+    FREQ=192000000
 endif
 
 LFLAGS = -mthumb -mcpu=$(CPU) -mfpu=$(FPU) -mfloat-abi=$(FABI)
@@ -211,7 +217,7 @@ run_jlink:
 
 flash: all
 	@echo "Flashing target..."
-	JLinkExe -device $(DEVICE) -if SWD -speed 4000 -AutoConnect 1 -CommandFile jlink/flash.jlink
+	$(JLINK) -device $(DEVICE) -if SWD -speed 4000 -AutoConnect 1 -CommandFile jlink/flash.jlink
 
 run_gdb:
 	$(Q) $(GDB)

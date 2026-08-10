@@ -7,6 +7,7 @@ import struct
 import serial
 import time
 import argparse
+from pathlib import Path
 
 # 1. Configure the experiment details
 BAUD_RATE = 9600
@@ -14,19 +15,42 @@ SERVERS = {
     "8081": "ws1",
     "8082": "ws2",
     "8083": "hpc",
+    "8084": "baldo",
 }
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Download MLflow artifacts and run on device.")
-    parser.add_argument("--port", default="0", help="Serial port (default: 0 -> /dev/ttyACM0)")
+    parser.add_argument("--dbg", default="0", help="Debugger name: SEGGER for apollo (0) or ST=LINK for stm (1)")
     parser.add_argument("--dataset", default="MNIST", help="Dataset name (default: MNIST)")
     parser.add_argument("--exp-name", default="Default", help="Experiment name (default: Default)")
     parser.add_argument("--target_value", type=float, default=1.0, help="Target parameter value (default: 1.0)")
     parser.add_argument("--target_param", default="reg_alpha", help="Target parameter name (default: entropy_alpha)")
     parser.add_argument("--mlflow_port", default="8081", help="MLflow tracking port (default: 8081)")
     parser.add_argument("--mode", default=0, type=int, help="Memory mode: SORTED (0), UNSORTED (1), RANDOM SORT (2), SRAM ONLY (3)")
-    parser.add_argument("--high-perf", default=0, type=bool, help="High performance mode: On (0), Off (1)")
+    parser.add_argument("--high-perf", default=0, type=int, help="High performance mode: On (0), Off (1)")
     return parser.parse_args()
+
+
+def get_serial_by_id(debugger: str = "ST-LINK") -> tuple[bool, str]:
+    by_id_dir = Path("/dev/serial/by-id")
+    device_map = {}
+
+    port =  ""
+    if not by_id_dir.exists():
+        return True, port
+
+    for symlink in by_id_dir.iterdir():
+        # resolve() follows the symlink to /dev/ttyACM*
+        real_port = str(symlink.resolve())
+        device_map[symlink.name] = real_port
+        
+        if debugger in symlink.name in symlink.name:
+            port = real_port
+
+    if port != "":
+        return True, port
+
+    return False, port
 
 def tensor_bytes_to_c_array(tensor_bytes: bytes) -> str:
     """Deserialize int64 tensor bytes and emit C array initializer."""
@@ -77,14 +101,13 @@ def build_header(artifacts_dir: str, header_path: str, mode: int):
 
 def run_make(mode: int, task: str, high_perf: bool):
     print("Running make clean all...")
-    perf = "HIGH_PERF=1" if high_perf else "" 
+    perf = "HIGH_PERF=1" if high_perf else "HIGH_PERF=0" 
     if mode == 0 or mode == 2: # Optimal sorted or random sorted
-        command = ["make", "clean", f"all", f"TASK={task}", perf, "SORTED=1"]
+        command = ["make", "clean", f"all", perf, f"TASK={task}", "SORTED=1"]
     elif mode == 1:
         command = ["make", "clean", f"all", perf, f"TASK={task}"]
     else:
         command = ["make", "clean", f"all", perf, f"TASK={task}", "SRAM=1"]
-    breakpoint()
     result = subprocess.run(command, cwd="..", capture_output=True, text=True)
     if result.returncode != 0:
         print("Make failed:")
@@ -187,6 +210,16 @@ def main():
             subprocess.run(command, capture_output=True, text=True)
 
             latency = "null"
+            breakpoint()
+            debugger = "SEGGER" if args.dbg == 0 else "ST-LINK"
+            error, port = get_serial_by_id(debugger)
+            if error and port != "":
+                print("Directory /dev/serial/by-id does not exist.")
+                assert(False)
+            elif error and port == "":
+                print(f"{args.dbg} not found.")
+                assert(False)
+
             if run_make(args.mode, args.dataset, args.high_perf):
                 if flash_device():
                     latency = read_serial(f"/dev/ttyACM{args.port}")
