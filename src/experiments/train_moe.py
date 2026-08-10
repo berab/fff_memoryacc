@@ -44,6 +44,9 @@ class TrainMoE(BaseTrainExp):
                    "expert_std": [], "mem_loss": [],
                    "p_mem1": [], "p_mem2": [], "pmem1/pmem2": [],
                    }
+        if n_mem1 == 0:
+            logging.warning(f"n_mem1 is 0, mem1: {mem1}, mem2: {mem2}, router_size: {router_size}, leaf_size: {expert_size}")
+            return metrics
         # Training
         for epoch in range(self.epochs):
             train_loss, train_acc, reg_loss, entropy_loss, mem_loss = moe_train_epoch(self.model, self.optim, self.loader.train, self.criterion, epoch, self.device, self.reg_alpha, self.entropy_alpha, self.dist_reg, self.dist_alpha, n_mem1, self.mem_alpha)
