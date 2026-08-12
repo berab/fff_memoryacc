@@ -1,5 +1,9 @@
 #include <stdint.h>
 
+#ifdef FMNIST
+#include "fmnist.h"
+#include "fmnist_conf.h"
+#endif
 #ifdef MNIST
 #include "mnist.h"
 #include "mnist_conf.h"

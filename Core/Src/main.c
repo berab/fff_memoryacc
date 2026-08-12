@@ -83,7 +83,7 @@ int main(void)
     uint32_t end_ms = HAL_GetTick();
     uint32_t elapsed_ms = end_ms - start_ms;
     HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin);
-    printf("elapsed_ms=%ld\n\r", elapsed_ms);
+    printf("\n\relapsed_ms=%ld\n\r", elapsed_ms);
     /* USER CODE BEGIN 3 */
     /* USER CODE END 3 */
     }

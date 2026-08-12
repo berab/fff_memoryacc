@@ -1,3 +1,7 @@
+
+#ifndef SC_CONF_H
+#define SC_CONF_H
+
 #include "sc_weights.h"
 #include "sc_leafstats.h"
 
@@ -6,3 +10,6 @@
 #define N_LEAVES (1 << DEPTH)
 #define N_NODES (N_LEAVES - 1)
 #define N_LEAVES_SRAM 3
+
+#endif // SC_CONF_H
+            

@@ -1,9 +1,9 @@
 
-#ifndef MNIST_CONF_H
-#define MNIST_CONF_H
+#ifndef FMNIST_CONF_H
+#define FMNIST_CONF_H
 
-#include "mnist_weights.h"
-#include "mnist_leafstats.h"
+#include "fmnist_weights.h"
+#include "fmnist_leafstats.h"
 
 #define DEPTH 4
 #define LEAF_WIDTH 4
@@ -11,5 +11,5 @@
 #define N_NODES (N_LEAVES - 1)
 #define N_LEAVES_SRAM 4
 
-#endif // MNIST_CONF_H
+#endif // FMNIST_CONF_H
             
