@@ -108,7 +108,8 @@ def train_epoch_mem(model, optim, loader, criterion, epoch, device, reg_alpha: f
 
 # TODO: Loss for maximizing sample entropy or minimizing class entropy
 def ia_train_epoch(model, optim, loader, criterion, epoch, device, reg_alpha: float = 0.0, 
-                   entropy_alpha: float = 0.0, a_alpha: float = 0.0, dist_reg = None, dist_alpha = 0.0, n_mem1 = 1, mem_alpha = 0.0):
+                   entropy_alpha: float = 0.0, a_alpha: float = 0.0, dist_reg = None, 
+                   dist_alpha = 0.0, n_mem1 = 1, mem_alpha = 0.0):
     model.train()
     correct, dist_loss, running_loss, running_reg_loss, running_entropy_loss, running_dist_loss = 0, 0.0, 0.0, 0.0, 0.0, 0.0
     running_mem_loss = 0.0
@@ -226,6 +227,43 @@ def moe_train_epoch(model, optim, loader, criterion, epoch, device, reg_alpha: f
         # back propagation
         _, preds = torch.max(outputs.data, 1)
         loss = criterion(outputs, targets) + reg_alpha * reg_loss + entropy_alpha * entropy_loss + mem_loss * mem_alpha + dist_loss * dist_alpha
+        optim.zero_grad()
+        loss.backward()
+        optim.step()
+
+        # other stats
+        running_loss += loss.item()
+        running_reg_loss += reg_loss.item()
+        running_entropy_loss += entropy_loss.item()
+        running_mem_loss += mem_loss.item()
+        correct += (preds == targets).sum().item()
+
+    return (running_loss/len(loader), correct/len(loader.dataset), running_reg_loss/len(loader), 
+            running_entropy_loss/len(loader), running_mem_loss/len(loader))
+
+# TODO: Loss for maximizing sample entropy or minimizing class entropy
+def moe_train_epoch_mem(model, optim, loader, criterion, epoch, device, reg_alpha: float = 0.0, 
+                        entropy_alpha: float = 0.0, n_mem1 = 1, mem_alpha = 0.0, mem1_experts = None):
+    model.train()
+    correct, running_loss, running_reg_loss, running_entropy_loss = 0, 0.0, 0.0, 0.0
+    running_mem_loss = 0.0
+    n_experts = model.n_experts
+    mem1_mask = torch.zeros(n_experts, dtype=torch.bool)
+    mem1_mask[mem1_experts] = True
+
+    for i, (inputs, targets) in tqdm(enumerate(loader), total=len(loader)):
+        inputs, targets = inputs.to(device), targets.to(device)
+        outputs, probs, entropies = model(inputs)
+
+        mem1_expert_dist, mem2_expert_dist = probs.mean(dim=0)[mem1_mask], probs.mean(dim=0)[~mem1_mask]
+        mem_loss = mem2_expert_dist.sum()/mem1_expert_dist.sum() # Since we want mem1 high, mem2 low (which happens if this loss descends)
+
+        reg_loss = (1 / probs.std(dim=1)).mean()
+        entropy_loss = entropies.mean()
+
+        # back propagation
+        _, preds = torch.max(outputs.data, 1)
+        loss = criterion(outputs, targets) + reg_alpha * reg_loss + entropy_alpha * entropy_loss + mem_loss * mem_alpha
         optim.zero_grad()
         loss.backward()
         optim.step()

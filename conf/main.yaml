@@ -21,7 +21,7 @@ dist_reg: null
 dist_alpha: 1.0
 dist_warmup: 0 # 10 epochs
 mem_alpha: 0.0 # 10 epochs
-mem_tune: 5 # 10 epochs
+mem_tune: 0 # 10 epochs
 
 device: 
   _target_: torch.device
